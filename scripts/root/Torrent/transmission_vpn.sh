@@ -28,8 +28,8 @@ iptables -A INPUT -i $VPN_IF -p tcp -m tcp --dport 9091 -j DROP
 iptables -A INPUT -i $VPN_IF -p tcp -m tcp --dport 22 -j DROP
 
 # Allow responses but block everything else on $VPN_IF
-iptables -A INPUT -m state --state ESTABLISHED -j ACCEPT
-iptables -A INPUT -i $VPN_IF -j REJECT
+iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+iptables -A INPUT -i $VPN_IF -j DROP
 
 # Send DNS to VPNArea for $VPN_USER
 iptables -t nat -A OUTPUT --dest $LAN_NW -p udp --dport 53 -m owner --uid-owner $VPN_USER -j DNAT --to-destination 45.76.95.185
