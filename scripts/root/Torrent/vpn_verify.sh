@@ -172,7 +172,7 @@ function vpn_get_info {
 
 	for I in `seq 1 $VPN_MAX_DEV_ATTEMPTS`; do
 		VPN_DEV=$STATIC_VPN_DEV
-		VPN_IP=`ifconfig tun0 | grep inet | awk '{print $2}'`
+		VPN_IP=`ifconfig $VPN_DEV | egrep -o '([0-9]{1,3}\.){3}[0-9]{1,3}' | egrep -v '255|(127\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})' | head -n1`
 
 		if [ -z $VPN_DEV ]; then
 			log_text "Unable to determine VPN device ID"
@@ -204,7 +204,7 @@ function vpn_test_link {
 	for I in `seq 1 $VPN_MAX_RESTART_ATTEMPTS`; do
 		log_text "Attempting to find remote host for $VPN_DEV"
 		for J in `seq 1 $VPN_MAX_ROUTE_ATTEMPTS`; do
-			VPN_REMOTE_HOST=`route -v | grep "$VPN_DEV" | grep -m 1 UG | awk '{print $2}'`
+			VPN_REMOTE_HOST=`ifconfig $VPN_DEV | egrep -o '([0-9]{1,3}\.){3}[0-9]{1,3}' | egrep -v '255|(127\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})' | tail -n1`
 			if [ -z "$VPN_REMOTE_HOST" ]; then
 				sleep $WAIT_TIME_SECONDS
 			fi
