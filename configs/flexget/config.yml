@@ -1,0 +1,104 @@
+tasks:
+  Series-x264-720p:
+    discover:
+      what:
+        - next_series_episodes: yes
+      from:
+        - rarbg:
+            category: 41 #x264 720p
+            use_tvdb: True
+      interval: 2 hours
+    magnets: no
+    content_filter:
+      reject: '*1080p*'
+    rss: https://eztv.ag/ezrss.xml
+    series:
+      - Game of Thrones:
+          begin: S06E01
+      - Castle:
+          begin: S08E09
+      - The 100:
+          begin: S03E01
+      - Orange is the new Black:
+          begin: S04E01
+      - Stranger Things:
+          begin: S01E01
+      - The Orville:
+          begin: S01E01
+      - Star Trek Discovery:
+          begin: S01E01
+    transmission: yes
+
+  Series-x264-hdtv:
+    discover:
+      what:
+        - next_series_episodes: yes
+      from:
+        - rarbg:
+            category: 18
+            use_tvdb: True
+      interval: 2 hours
+    magnets: no
+    content_filter:
+      reject:
+        - '*720p*'
+        - '*1080p*'
+    rss: https://eztv.ag/ezrss.xml
+    series:
+      - The Big Bang Theory:
+          begin: S09E12
+      - Modern Family:
+          begin: S07E10
+      - Silicon Valley:
+          begin: S03E01
+      - Suits:
+          begin: S05E11
+      - New Girl:
+          begin: S05E01
+      - The Librarians US:
+          begin: S03E04
+      - The Expanse:
+          begin: S01E01
+      - Greys Anatomy:
+          begin: S12E09
+      - Brooklyn Nine Nine:
+          begin: S03E01
+      - Jane The Virgin:
+          begin: S02E14
+      - Angie Tribeca:
+          begin: S01E01
+      - The Last Man On Earth:
+          begin: S02E01
+      - Quantico:
+          begin: S01E01
+      - The Catch:
+          begin: S01E01
+      - Shades of Blue:
+          begin: S01E01
+      - Westworld:
+          begin: S01E01
+      - No Tomorrow:
+          begin: S01E01
+      - The Good Place:
+          begin: S01E01
+      - Timeless:
+          begin: S01E11
+      - Frequency:
+          begin: S01E01
+      - The Young Pope:
+          begin: S01E01
+      - Humans:
+          begin: S01E01
+      - Dark Matter:
+          begin: S01E02
+      - Sherlock:
+          begin: S04E01
+      - Family Guy:
+          begin: S14E01
+      - The Alienist:
+          begin: S01E01
+      - Superstore:
+          begin: S02E06
+      - Rick and Morty:
+          begin: S03E04
+    transmission: yes
