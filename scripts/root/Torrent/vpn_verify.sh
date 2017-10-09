@@ -3,17 +3,18 @@
 START_SERVICE="rc"
 #START_SERVICE="systemd"
 
+VPN_PROVIDER=$1
+SCRIPTS_ROOT=$2
+
 LOGGING_ENABLED=1
 LOG_FILE="/dev/shm/vpntest.log"
-
 TESTING=0
-
-VPN_PROVIDER=$1
 
 WAIT_TIME_SECONDS=1
 
 TRANSMISSION_SERVICE="transmission-daemon"
 #TRANSMISSION_SERVICE="transmission"
+TRANSMISSION_USER="transmission"
 
 STATIC_VPN_DEV="tun0" # "Hardcoded" in config
 VPN_PROVIDERS_PING_ONE="vpnarea"
@@ -38,7 +39,7 @@ if [ "$START_SERVICE" == "rc" ]; then
 	TRANSMISSION_STATUS_CMD="/etc/init.d/$TRANSMISSION_SERVICE status"
 
 	SERVICE_OK_STRING="status: started" # Systemd
-elif [ "$START_SERVICE" == "systemd" ]; then 
+elif [ "$START_SERVICE" == "systemd" ]; then
 	VPN_START_CMD="systemctl start openvpn-client@$VPN_PROVIDER.service" # Systemd
 	VPN_STOP_CMD="systemctl stop openvpn-client@$VPN_PROVIDER.service" # Systemd
 	VPN_STATUS_CMD="systemctl status openvpn-client@$VPN_PROVIDER.service" # Systemd
@@ -82,7 +83,7 @@ function vpn_get_status {
 	# Test if the VPN is up by calling $VPN_STATUS_CMD once
 	# If the VPN is up, the 'grep' will succeed
 	STATUS=`$VPN_STATUS_CMD | grep "$SERVICE_OK_STRING"`
-		
+
 	if [ -z "$STATUS" ]; then
 		log_text "VPN not up; STATUS=$STATUS"
 		VPN_UP=0
@@ -107,10 +108,14 @@ function vpn_start {
 			sleep $VPN_START_WAIT_TIME_SECONDS
 		else
 			log_text "Service is OK; STATUS=$STATUS"
+
+			log_text "Setting up routes and firewall rules for VPN"
+			$SCRIPTS_ROOT/Torrent/transmission_vpn.sh $TRANSMISSION_USER
+			$SCRIPTS_ROOT/Network/vpn_route.sh $START_SERVICE
 			return
 		fi
 	done
-	
+
 	log_text "vpn_start: VPN still down after testing $VPN_MAX_START_ATTEMPTS times"
 	log_text 0
 	exit 1
@@ -134,7 +139,7 @@ function vpn_stop {
 			return
 		fi
 	done
-	
+
 	log_text "vpn_stop: VPN still up after testing $VPN_MAX_START_ATTEMPTS times"
 	log_text 0
 	exit 1
@@ -144,7 +149,7 @@ function vpn_get_info {
 	# Attempt to determine the VPN device by testing the output of the
 	# log file $VPN_MAX_DEV_ATTEMPTS times with $WAIT_TIME_SECONDS seconds
 	# between attempts
-	
+
 	for I in `seq 1 $VPN_MAX_DEV_ATTEMPTS`; do
 		VPN_DEV=$STATIC_VPN_DEV
 		VPN_IP=`ifconfig tun0 | grep inet | awk '{print $2}'`
@@ -153,13 +158,13 @@ function vpn_get_info {
 			log_text "Unable to determine VPN device ID"
 			exit 1
 		fi
-		
+
 		if [ -z $VPN_IP ]; then
 			log_text "Unable to determine VPN IP [$I/$VPN_MAX_DEV_ATTEMPTS]"
 			sleep $WAIT_TIME_SECONDS
 			continue
 		fi
-		
+
 		log_text "VPN Device: $VPN_DEV"
 		log_text "VPN IP: $VPN_IP"
 		return
@@ -175,7 +180,7 @@ function vpn_test_link {
 	# and assume that the destination IP is sufficient as a test IP
 	# Do this $VPN_MAX_ROUTE_ATTEMPTS times at $WAIT_TIME_SECONDS intervals to
 	# make sure routes are set properly after a tunnel start
-	
+
 	for I in `seq 1 $VPN_MAX_RESTART_ATTEMPTS`; do
 		log_text "Attempting to find remote host for $VPN_DEV"
 		for J in `seq 1 $VPN_MAX_ROUTE_ATTEMPTS`; do
@@ -209,11 +214,11 @@ function vpn_test_link {
 			vpn_start
 			continue
 		fi
-		
+
 		log_text "Successfully pinged $VPN_REMOTE_HOST"
 		return
 	done
-	
+
 	log_text "Unable to successfully verify VPN link after $VPN_MAX_RESTART_ATTEMPTS attempts"
 	log_text 0
 	exit 1
@@ -221,10 +226,10 @@ function vpn_test_link {
 
 function transmission_stop {
 	$TRANSMISSION_STOP_CMD
-	
+
 	for I in `seq 1 $TRANSMISSION_MAX_STATUS_ATTEMPTS`; do
 		STS=`$TRANSMISSION_STATUS_CMD | grep "$SERVICE_OK_STRING"`
-		
+
 		if [ -z "$STS" ]; then
 			# $TRANSMISSION_STATUS_CMD
 			log_text "Transmission shutdown complete"
@@ -234,7 +239,7 @@ function transmission_stop {
 			sleep $WAIT_TIME_SECONDS
 		fi
 	done
-	
+
 	log_text "Transmission daemon shutdown did not complete after $TRANSMISSION_MAX_STATUS_ATTEMPTS cycles"
 	log_text 0
 	exit 1
@@ -242,10 +247,10 @@ function transmission_stop {
 
 function transmission_start {
 	$TRANSMISSION_START_CMD
-	
+
 	for I in `seq 1 $TRANSMISSION_MAX_STATUS_ATTEMPTS`; do
 		STS=`$TRANSMISSION_STATUS_CMD | grep "$SERVICE_OK_STRING"`
-		
+
 		if [ -z "$STS" ]; then
 			log_text "Transmission daemon startup not done yet [$I]"
 			sleep $WAIT_TIME_SECONDS
@@ -255,7 +260,7 @@ function transmission_start {
 			return
 		fi
 	done
-	
+
 	log_text "Transmission daemon startup did not complete after $TRANSMISSION_MAX_STATUS_ATTEMPTS cycles"
 	log_text 0
 	exit 1
@@ -298,7 +303,7 @@ if [ ! -f $TRANSMISSION_SETTINGS_FILE ]; then
 else
 	log_text "Comparing current IP with stored value"
 	TRANSMISSION_BIND_IP=`cat $TRANSMISSION_SETTINGS_FILE | grep bind-address-ipv4 | awk '{print $2}' | sed 's/[",]//g'`
-	
+
 	if [ ! "$VPN_IP" = "$TRANSMISSION_BIND_IP" ]; then
 		log_text "Current and stored IPs do not match, updating required"
 		log_text "Stored IP: $TRANSMISSION_BIND_IP"
@@ -306,7 +311,7 @@ else
 		log_text "Stopping transmission"
 		# Stop the transmission daemon before we can update the config file
 		transmission_stop
-		
+
 		# Update the transmission config file
 		log_text "Update $TRANSMISSION_SETTINGS_FILE"
 		sed -i "/bind-address-ipv4/c\   \"bind-address-ipv4\": \"${VPN_IP}\"," $TRANSMISSION_SETTINGS_FILE
@@ -317,7 +322,7 @@ else
 	else
 		log_text "No Transmission bind IP update required"
 	fi
-	
+
 fi
 
 log_text 0
