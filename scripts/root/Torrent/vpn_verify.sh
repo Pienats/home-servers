@@ -223,7 +223,7 @@ function vpn_test_link {
 		fi
 
 		log_text "Attempting to ping $VPN_REMOTE_HOST"
-		ping -c 1 -W 3 $VPN_REMOTE_HOST > /dev/null 2>&1
+		runuser -l transmission -s /bin/bash -c 'ping -c 1 -W 3 $VPN_REMOTE_HOST > /dev/null 2>&1'
 		RES=$?
 
 		if [ "$RES" -ne "0" ]; then
