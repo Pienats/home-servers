@@ -112,24 +112,26 @@ function vpn_start {
 			for J in `seq 1 $VPN_MAX_START_ATTEMPTS`; do
 				if ifconfig $STATIC_VPN_DEV ; then
 					log_text "$STATIC_VPN_DEV appears up and configured"
+					VPN_CONFIGURED=1
 					break;
 				else
-					log_text "$$STATIC_VPN_DEV does not yet appeared to be configured [$J/$STATIC_VPN_DEV]"
+					log_text "$STATIC_VPN_DEV does not yet appeared to be configured [$J/$STATIC_VPN_DEV]"
+					VPN_CONFIGURED=0
 					sleep $VPN_START_WAIT_TIME_SECONDS
 				fi
 			done
 
 			# TODO: Find better way to do this
-			if ifconfig $STATIC_VPN_DEV ; then
+			if [ "$VPN_CONFIGURED" -eq "1" ]; then
 				log_text "Setting up routes and firewall rules for VPN"
 				$SCRIPTS_ROOT/Torrent/transmission_vpn.sh $TRANSMISSION_USER
 				$SCRIPTS_ROOT/Network/vpn_route.sh $START_SERVICE
-				break;
 			else
-				log_text "$$STATIC_VPN_DEV does not yet appeared to be configured after $STATIC_VPN_DEV test cycles"
+				log_text "$STATIC_VPN_DEV does not yet appeared to be configured after $STATIC_VPN_DEV test cycles"
 				log_text 0
 				exit 1
 			fi
+
 			return
 		fi
 	done
