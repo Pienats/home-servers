@@ -23,6 +23,9 @@ iptables -t mangle -A OUTPUT --dest $LAN_NW -p udp --dport 53 -m owner --uid-own
 iptables -t mangle -A OUTPUT --dest $LAN_NW -p tcp --dport 53 -m owner --uid-owner $VPN_USER -j MARK --set-mark $VPN_MARK
 iptables -t mangle -A OUTPUT ! --src $LAN_NW -j MARK --set-mark $VPN_MARK # WHD: not sure what purpose this serves
 
+# Allow root to send ping requests
+iptables -t mangle -A OUTPUT ! --dest $LAN_NW -p icmp --icmp-type 8 -m owner --uid-owner root -j MARK --set-mark $VPN_MARK
+
 # Don't allow SSH or transmission web UI over the tunel
 iptables -A INPUT -i $VPN_IF -p tcp -m tcp --dport 9091 -j DROP
 iptables -A INPUT -i $VPN_IF -p tcp -m tcp --dport 22 -j DROP

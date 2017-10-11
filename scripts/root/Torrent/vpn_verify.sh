@@ -10,7 +10,7 @@ LOGGING_ENABLED=1
 LOG_FILE="/dev/shm/vpntest.log"
 TESTING=0
 
-WAIT_TIME_SECONDS=1
+WAIT_TIME_SECONDS=4
 
 TRANSMISSION_SERVICE="transmission-daemon"
 #TRANSMISSION_SERVICE="transmission"
@@ -137,6 +137,7 @@ function vpn_start {
 	done
 
 	log_text "vpn_start: VPN still down after testing $VPN_MAX_START_ATTEMPTS times"
+	vpn_stop
 	log_text 0
 	exit 1
 }
@@ -223,7 +224,7 @@ function vpn_test_link {
 		fi
 
 		log_text "Attempting to ping $VPN_REMOTE_HOST"
-		runuser -l transmission -s /bin/bash -c 'ping -c 1 -W 3 $VPN_REMOTE_HOST > /dev/null 2>&1'
+		su -l $TRANSMISSION_USER -s /bin/bash -c "ping -c 1 -W 3 $VPN_REMOTE_HOST"
 		RES=$?
 
 		if [ "$RES" -ne "0" ]; then
