@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 import datetime
 import os
@@ -6,6 +6,9 @@ import os
 import Network.vpn as vpnet
 
 # Define some "constants"
+ERROR = -1
+SUCCESS = 0
+
 TRANSMISSION_USER="werner"
 TRANSMISSION_ADDED_DIR="/var/lib/werner-test/added/"
 TRANSMISSION_ACTIVE_DIR="/var/lib/werner-test/config/torrents/"
@@ -54,6 +57,40 @@ def torrents_check():
 
 	return
 
+def vpnCheck(vpn, maxAttempts = 1):
+	retVal = ERROR
+
+	for attempt in range(0, maxAttempts):
+		vpnStatus = vpn.getStatus()
+
+		if (vpnStatus != vpnet.UP):
+			print("VPN is down, starting it...")
+			vpnStatus = vpn.start()
+
+			if (vpnStatus != vpnet.UP):
+				print("No active VPN connection, aborting")
+				retVal = ERROR
+				break
+
+		# Here the VPN service should be up with the tunnel interface configured
+		print("VPN appears up, getting info and pinging peer")
+		vpn.getInfo()
+		vpnStatus = vpn.pingPeer()
+
+		if (vpnStatus != vpnet.UP):
+			print("Unable to ping VPN peer")
+			retVal = ERROR
+			vpn.stop() # Restart VPN to get a better connection
+			continue
+
+		retVal = SUCCESS
+		break # Reaching this point means the VPN is up and connected
+
+	if (retVal == ERROR):
+		vpn.stop()
+	return retVal
+
+
 
 print("The current time is %d:%d" % (localtime.hour, localtime.minute))
 
@@ -69,8 +106,18 @@ print("\n")
 if (GlobalState.flexget_needed or GlobalState.transmision_needed):
 	print("We need to check/start the VPN interface")
 
-	vpn = vpnet.VPN("vpnarea", "tun0", "openRC")
-	#vpnIf = net.Interface("eth0")
-	vpn.getStatus()
+	#vpn = vpnet.VPN("vpnarea", "tun0", "openRC", True)
+	vpn = vpnet.VPN("ctwduvel", "tun25", "openRC", True)
+
+	r = vpnCheck(vpn, 2)
+	if (r == SUCCESS):
+		print("VPN is good to go")
+	else:
+		print("VPN error, aborting")
+		sys.exit(1);
+
+
 else:
 	print("Nothing needs the VPN, stop it if it is up")
+	print("(but not yet actually doing so)")
+#vpn.stop()
