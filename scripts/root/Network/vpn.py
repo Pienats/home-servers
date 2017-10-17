@@ -1,7 +1,7 @@
 
 import subprocess
 
-import Network.interface as iface
+import Network.interface as interface
 import Service.service as service
 
 DOWN = -1
@@ -21,7 +21,7 @@ class VPN:
 
 		if ( initSystem == "openRC"):
 			self.service = service.Service("openvpn." + provider, initSystem)
-			self.vpnIf = iface.Interface(ifId)
+			self.vpnIf = interface.Interface(ifId)
 		else:
 			print("Unsupported start system type: %s" % initSystem)
 			# TODO: throw exception
@@ -38,7 +38,7 @@ class VPN:
 		if (status == service.RUNNING):
 			print("VPN Service is running")
 			ifStatus = self.vpnIf.getStatus()
-			if (ifStatus == iface.UP):
+			if (ifStatus == interface.UP):
 				print("VPN interface is up")
 				return UP
 				#TODO: test connectivity
@@ -55,7 +55,7 @@ class VPN:
 		if (status == service.RUNNING):
 			#do stuff
 			ifStatus = self.vpnIf.getStatus()
-			if (ifStatus == iface.UP):
+			if (ifStatus == interface.UP):
 				print("VPN service is running")
 				return UP
 			else:
