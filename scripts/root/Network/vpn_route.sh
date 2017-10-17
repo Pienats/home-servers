@@ -10,7 +10,7 @@ VPN_IF="tun0"
 VPN_TABLE="vpn"
 VPN_MARK="0x2"
 
-if [ "$SYSTEM_TYPE" == "rc" ]; then
+if [ "$SYSTEM_TYPE" == "openRC" ]; then
 	VPN_CONF="/etc/openvpn/$VPN_PROVIDER.conf"
 elif [ "$SYSTEM_TYPE" == "systemd" ]; then
 	VPN_CONF="/etc/openvpn/client/$VPN_PROVIDER.conf"
