@@ -2,6 +2,10 @@
 
 import datetime
 import os
+import sys
+import getopt
+import configparser
+
 #import Network.interface as net
 import Network.vpn as vpnet
 
@@ -16,8 +20,18 @@ TRANSMISSION_ACTIVE_DIR="/var/lib/werner-test/config/torrents/"
 localtime = datetime.datetime.now().time()
 
 class GlobalState():
+	configFile = ""
 	flexget_needed = False
 	transmision_needed = False
+
+	# Shared config
+	initSystem = ""
+
+	# VPN config
+	vpnProvider = ""
+	vpnInterface = ""
+	vpnPingOne = False
+
 
 # file lists to manipulate later
 added_torrents = []
@@ -90,14 +104,81 @@ def vpnCheck(vpn, maxAttempts = 1):
 		vpn.stop()
 	return retVal
 
+def printUsage(appName):
+	print("\nUsage: %s [options]" % appName)
+	print("Available Options:")
+	print("  -c | --config        <config file>     Path to the configuration file to use for parameters")
+	print("  -h | --help                            This help message")
+	sys.exit()
+
+def optionParsing(argv):
+	print("Number of arguments: %d" % len(argv))
+	print("Arguments: %s" % str(argv))
+	try:
+		opts, args = getopt.getopt(argv[1:], "c:h", ["config=","help"])
+	except getopt.GetoptError as goe:
+		print(goe)
+		printUsage(argv[0])
+
+	for opt, arg in opts:
+		print("opt: %s" % opt)
+		if opt in ("-c", "--config"):
+			print("Config file to use: %s" % arg)
+			GlobalState.configFile = arg
+		elif opt in ("-h", "--help"):
+			printUsage(argv[0])
+
+def configParseShared(sharedConfig):
+	if 'InitSystem' in sharedConfig:
+		GlobalState.initSystem = sharedConfig['InitSystem']
+	else:
+		print("Error: Provided config does not specify the init system")
+		sys.exit(1)
+	return
+
+def configParseVpn(vpnConfig):
+	print("VPN config:")
+	if 'Provider' in vpnConfig:
+		GlobalState.vpnProvider = vpnConfig['Provider']
+	else:
+		print("Error: Provided config does not specify the VPN provider")
+		sys.exit(1)
+
+	if 'Interface' in vpnConfig:
+		GlobalState.vpnInterface = vpnConfig['Interface']
+	else:
+		print("Error: Provided config does not specify the VPN provider")
+		sys.exit(1)
+
+	if 'PingOne' in vpnConfig:
+		GlobalState.vpnPingOne = vpnConfig['PingOne']
+	else:
+		GlobalState.vpnPingOne = False
+
+def getConfig(configFile):
+	config = configparser.ConfigParser()
+	try:
+		config.read(configFile)
+		if 'VPN' not in config.sections():
+			print("Error: Provided config contains no VPN section")
+			sys.exit(1)
+
+		configParseShared(config['DEFAULT'])
+		configParseVpn(config['VPN'])
+
+	except configparser.ParsingError:
+		print("Error parsing config file %s" % configFile)
+		sys.exit(1)
 
 
+######################################################################################
 print("The current time is %d:%d" % (localtime.hour, localtime.minute))
+optionParsing(sys.argv)
+getConfig(GlobalState.configFile)
 
 if (((localtime.hour % 2) == 0) and (localtime.minute < 5)):
 	print ("Check flexget")
 	GlobalState.flexget_needed = True
-	# TODO: expand to run flexget (or at least set flag that it should be run)
 
 torrents_check()
 
@@ -105,9 +186,7 @@ print("\n")
 
 if (GlobalState.flexget_needed or GlobalState.transmision_needed):
 	print("We need to check/start the VPN interface")
-
-	#vpn = vpnet.VPN("vpnarea", "tun0", "openRC", True)
-	vpn = vpnet.VPN("ctwduvel", "tun25", "openRC", True)
+	vpn = vpnet.VPN(GlobalState.vpnProvider, GlobalState.vpnInterface, GlobalState.initSystem, GlobalState.vpnPingOne)
 
 	r = vpnCheck(vpn, 2)
 	if (r == SUCCESS):
