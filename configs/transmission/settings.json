@@ -63,4 +63,6 @@
     "umask": 2,
     "upload-slots-per-torrent": 14,
     "utp-enabled": true
+    "watch-dir": "/var/lib/transmission/added",
+    "watch-dir-enabled": true
 }
