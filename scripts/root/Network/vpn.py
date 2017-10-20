@@ -41,7 +41,6 @@ class VPN:
 			if (ifStatus == interface.UP):
 				print("VPN interface is up")
 				return UP
-				#TODO: test connectivity
 			else:
 				print("VPN interface is not available")
 				self.service.stop()
@@ -90,7 +89,6 @@ class VPN:
 			reconstPeer = peerComps[0] + "." + peerComps[1] + "." + peerComps[2] + ".1"
 			print("Reconstituted peer: %s" % reconstPeer)
 			self.ifParams[KEY_PING] = reconstPeer
-		# TODO: determine and store the "Ping-1" address
 
 	def pingPeer(self):
 		if (len(self.ifParams) == 0):

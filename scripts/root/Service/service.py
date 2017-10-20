@@ -1,4 +1,6 @@
-
+'''
+Linux service wrapper and abstraction
+'''
 import subprocess
 import time
 
@@ -18,7 +20,7 @@ class Service:
 		else:
 			print("Unsupported service %s" % self.initSystem)
 			# TODO: throw and handle exception
-		
+
 	def getCmd(self, action):
 		theCmd = ""
 		if (self.initSystem == "openRC"):
@@ -77,7 +79,7 @@ class Service:
 				time.sleep(waitTime)
 		print("Service not started yet after %d rounds" % testCount)
 		return STOPPED
-		
+
 	def stop(self):
 		cmd = self.getCmd("stop")
 		print("Command to execute [%d]: %s" % (len(cmd), cmd))
