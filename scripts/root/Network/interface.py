@@ -15,8 +15,9 @@ class Interface:
 	'Network interface class to determine status, starting and stopping'
 	status = DOWN
 
-	def __init__(self, ifId):
+	def __init__(self, ifId, verbose = False):
 		self.ifId = ifId
+		self.verbose = verbose
 		self.addrType = netifaces.AF_INET # We are interested in IPv4 addresses
 
 	def getId(self):
@@ -33,7 +34,8 @@ class Interface:
 		return DOWN
 
 	def getTunnelParams(self):
-		print("Retrieving tunnel parameters")
+		if (self.verbose):
+			print("Retrieving tunnel parameters")
 		# TODO: Test if interface ifId contains "tun", throw exception if not
 
 		# Tunnels have the following parameters of interest:
@@ -57,7 +59,8 @@ class Interface:
 			print("Key type %d not found in available address types" % self.addrType)
 
 	def getNetworkParams(self):
-		print("Retrieving tunnel parameters")
+		if (self.verbose):
+			print("Retrieving tunnel parameters")
 		# TODO: Test if interface ifId contains "tun", throw exception if not
 
 		# Tunnels have the following parameters of interest:

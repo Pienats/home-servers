@@ -12,16 +12,17 @@ KEY_PEER = 'peer'
 KEY_PING = 'ping'
 
 class VPN:
-	def __init__(self, provider, ifId, initSystem, pingOne = False):
+	def __init__(self, provider, ifId, initSystem, pingOne = False, verbose = False):
 		self.provider = provider
 		self.ifId = ifId
 		self.initSystem = initSystem
 		self.pingOne = pingOne
 		self.ifParams = {}
+		self.verbose = verbose
 
 		if ( initSystem == "openRC"):
-			self.service = service.Service("openvpn." + provider, initSystem)
-			self.vpnIf = interface.Interface(ifId)
+			self.service = service.Service("openvpn." + self.provider, self.initSystem, self.verbose)
+			self.vpnIf = interface.Interface(self.ifId, verbose)
 		else:
 			print("Unsupported start system type: %s" % initSystem)
 			# TODO: throw exception
@@ -77,9 +78,10 @@ class VPN:
 			print("No interface parameters available")
 			return
 
-		print("Interface parameters:")
-		print("Addr: %s" % self.ifParams[KEY_ADDR])
-		print("Peer: %s" % self.ifParams[KEY_PEER])
+		if (self.verbose):
+			print("Interface parameters:")
+			print("Addr: %s" % self.ifParams[KEY_ADDR])
+			print("Peer: %s" % self.ifParams[KEY_PEER])
 
 		if not self.pingOne:
 			self.ifParams[KEY_PING] = self.ifParams[KEY_PEER]
@@ -87,7 +89,8 @@ class VPN:
 			peer = self.ifParams[KEY_PEER]
 			peerComps = peer.split('.')
 			reconstPeer = peerComps[0] + "." + peerComps[1] + "." + peerComps[2] + ".1"
-			print("Reconstituted peer: %s" % reconstPeer)
+			if (self.verbose):
+				print("Reconstituted peer: %s" % reconstPeer)
 			self.ifParams[KEY_PING] = reconstPeer
 
 	def pingPeer(self):
@@ -96,14 +99,19 @@ class VPN:
 			return
 
 		cmd = ["ping", "-c 1", self.ifParams[KEY_PING]]
-		print("Command to execute [%d]: %s" % (len(cmd), cmd))
+		if (self.verbose):
+			print("Command to execute [%d]: %s" % (len(cmd), cmd))
 		try:
 			output = subprocess.check_output(cmd)
-			outString = output.decode("utf-8")
-			print("Command output:\n%s" % outString)
+			if (self.verbose):
+				outString = output.decode("utf-8")
+				print("Command output:\n%s" % outString)
 			return UP
 		except subprocess.CalledProcessError as cpe:
 			outString = cpe.output.decode("utf-8")
 			print("Service status error: %d" % cpe.returncode)
 			print("Exception Command output:\n%s" % outString)
 			return DOWN
+
+	def getAddr(self):
+		return self.ifParams[KEY_ADDR]
