@@ -8,15 +8,16 @@ import time
 STOPPED = 0
 RUNNING = 1
 
-SERVICE_MAX_TRY_COUNT = 5
-SERVICE_TRY_WAIT_TIME = 2
-
 class Service:
-	def __init__(self, name, initSystem):
+	def __init__(self, name, initSystem, verbose = False):
 		self.name = name
 		self.initSystem = initSystem
+		self.verbose = verbose
+
 		if (self.initSystem == "openRC"):
 			self.OK_STR = "[ ok ]"
+			self.STATUS_STARTED_STR = "started"
+			self.STATUS_STOPPED_STR = "stopped"
 		else:
 			print("Unsupported service %s" % self.initSystem)
 			# TODO: throw and handle exception
@@ -32,33 +33,47 @@ class Service:
 
 	def getStatus(self):
 		cmd = self.getCmd("status")
-		print("Command to execute [%d]: %s" % (len(cmd), cmd))
+		if (self.verbose):
+			print("Command to execute [%d]: %s" % (len(cmd), cmd))
 		try:
 			output = subprocess.check_output(cmd)
 			outString = output.decode("utf-8")
-			print("Command output:\n%s" % outString)
-			return RUNNING
+			if (self.verbose):
+				print("Command output:\n%s" % outString)
+			if (self.STATUS_STARTED_STR in outString):
+				return RUNNING
+			elif (self.STATUS_STOPPED_STR in outString):
+				return STOPPED
+			else:
+				print("Unknown state")
+				return STOPPED
 		except subprocess.CalledProcessError as cpe:
-			outString = cpe.output.decode("utf-8")
-			print("Service status error: %d" % cpe.returncode)
-			print("Exception Command output:\n%s" % outString)
+			# An exception here does not necessarily mean an error, so don't automatically
+			# print the output
+			if (self.verbose):
+				outString = cpe.output.decode("utf-8")
+				print("Service status error: %d" % cpe.returncode)
+				print("Exception Command output:\n%s" % outString)
 		return STOPPED
 
 	def start(self, testCount = 1, waitTime = 3):
 		# TODO: Exception on (testCount < 1)
 		cmd = self.getCmd("start")
-		print("Command to execute [%d]: %s" % (len(cmd), cmd))
+		if (self.verbose):
+			print("Command to execute [%d]: %s" % (len(cmd), cmd))
 		try:
 			output = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
 			#output = subprocess.run(cmd) # python 3.5
-			outString = output.decode("utf-8")
-			print("Command output:\n%s" % outString)
+			if (self.verbose):
+				outString = output.decode("utf-8")
+				print("Command output:\n%s" % outString)
 			return RUNNING
 		except subprocess.CalledProcessError as cpe:
 			outString = cpe.output.decode("utf-8")
-			print("Service start error: %d" % cpe.returncode)
-			#print("Exception stderr output:\n%s" % cpe.stderr) # python 3.5
-			print("Exception Command output:\n%s" % outString)
+			if (self.verbose):
+				print("Service start error: %d" % cpe.returncode)
+				#print("Exception stderr output:\n%s" % cpe.stderr) # python 3.5
+				print("Exception Command output:\n%s" % outString)
 			# Even if service start returns an error code, it is not necessarily a
 			# catastrophic failure. Search for the OK_STR, for the situation where
 			# a delayed start is encountered. In this case wait a bit to give the
@@ -82,12 +97,14 @@ class Service:
 
 	def stop(self):
 		cmd = self.getCmd("stop")
-		print("Command to execute [%d]: %s" % (len(cmd), cmd))
+		if (self.verbose):
+			print("Command to execute [%d]: %s" % (len(cmd), cmd))
 		try:
 			output = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
 			#output = subprocess.run(cmd) # python 3.5
-			outString = output.decode("utf-8")
-			print("Command output:\n%s" % outString)
+			if (self.verbose):
+				outString = output.decode("utf-8")
+				print("Command output:\n%s" % outString)
 		except subprocess.CalledProcessError as cpe:
 			outString = cpe.output.decode("utf-8")
 			print("Service stop error: %d" % cpe.returncode)
