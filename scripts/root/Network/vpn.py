@@ -12,7 +12,21 @@ KEY_PEER = 'peer'
 KEY_PING = 'ping'
 
 class VPN:
+	"""
+	Class to represent VPN connections
+	VPNs for the purpose of this application has two main components:
+	* Network interface (Communication interface; endpoint of encrypted tunnel)
+	* System service (Allows the OS to start/stop the VPN and retrieve basic status)
+	"""
 	def __init__(self, provider, ifId, initSystem, pingOne = False, verbose = False):
+		"""
+		Constructor
+		@param provider VPN provider
+		@param ifId Interface identifier used by the OS to identify the VPN network interface
+		@param initSystem The init system in use by the OS
+		@param pingOne Indicates that the x.x.x.1 IP should be pinged to test connectivity, instead of the tunnel peer
+		@param verbose Indicate whether or not verbose mode should be used
+		"""
 		self.provider = provider
 		self.ifId = ifId
 		self.initSystem = initSystem
@@ -30,10 +44,14 @@ class VPN:
 		return
 
 	def getStatus(self):
-		# Get status is somewhat ambiguous, as it means:
-		# 1) The VPN service is started
-		# 2) The connection is active and functioning
+		"""
+		Retrieve the VPN status
+		Get status is somewhat ambiguous, as it means:
+		1) The VPN service is started
+		2) The connection is active and functional
 
+		@return UP if the VPN is active and functional, DOWN otherwise
+		"""
 		# First try to find out if the service has started
 		status = self.service.getStatus()
 		if (status == service.RUNNING):
@@ -51,6 +69,11 @@ class VPN:
 		return DOWN
 
 	def start(self):
+		"""
+		Start the VPN
+
+		@return UP if VPN is active and functional, DOWN otherwise
+		"""
 		status = self.service.start(5, 5)
 		if (status == service.RUNNING):
 			#do stuff
@@ -70,9 +93,15 @@ class VPN:
 		return
 
 	def stop(self):
+		"""
+		Stop the VPN service
+		"""
 		self.service.stop()
 
-	def getInfo(self):
+	def updateInfo(self):
+		"""
+		Update VPN information based on tunnel interface
+		"""
 		self.ifParams = self.vpnIf.getTunnelParams()
 		if (len(self.ifParams) == 0):
 			print("No interface parameters available")
@@ -94,6 +123,11 @@ class VPN:
 			self.ifParams[KEY_PING] = reconstPeer
 
 	def pingPeer(self):
+		"""
+		Ping the tunnel peer
+
+		@return UP if VPN is active and functional, DOWN otherwise
+		"""
 		if (len(self.ifParams) == 0):
 			print("No interface parameters available")
 			return
@@ -114,4 +148,9 @@ class VPN:
 			return DOWN
 
 	def getAddr(self):
+		"""
+		Retrieve the VPN tunnel IP address
+
+		@return The VPN tunnel IP address
+		"""
 		return self.ifParams[KEY_ADDR]

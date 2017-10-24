@@ -12,18 +12,35 @@ KEY_PEER = 'peer'
 KEY_NETMASK = 'netmask'
 
 class Interface:
-	'Network interface class to determine status, starting and stopping'
+	"""
+	Class to represent a system network interface
+	"""
 	status = DOWN
 
 	def __init__(self, ifId, verbose = False):
+		"""
+		Constructor
+		@param ifId Interface identifier
+		@param verbose Indicate whether or not verbose mode should be used
+		"""
 		self.ifId = ifId
 		self.verbose = verbose
 		self.addrType = netifaces.AF_INET # We are interested in IPv4 addresses
 
 	def getId(self):
+		"""
+		Retrieve the interface identifier
+
+		@return The interface identifier
+		"""
 		return self.ifId
 
 	def getStatus(self):
+		"""
+		Retrieve the interface status
+
+		@return UP if the interface is configured, DOWN otherwise
+		"""
 		availableIfs = netifaces.interfaces()
 
 		if self.ifId in availableIfs:
@@ -34,6 +51,12 @@ class Interface:
 		return DOWN
 
 	def getTunnelParams(self):
+		"""
+		Retrieve the interface tunnel parameters (if applicable)
+
+		@return dictionary of tunnel parameters
+		@throws TODO: exception if interface is not a tunnel
+		"""
 		if (self.verbose):
 			print("Retrieving tunnel parameters")
 		# TODO: Test if interface ifId contains "tun", throw exception if not
@@ -59,13 +82,19 @@ class Interface:
 			print("Key type %d not found in available address types" % self.addrType)
 
 	def getNetworkParams(self):
+		"""
+		Retrieve network parameters
+
+		@return Network parameters
+		@throws TODO: exception if interface is a tunnel
+		"""
 		if (self.verbose):
 			print("Retrieving tunnel parameters")
-		# TODO: Test if interface ifId contains "tun", throw exception if not
+		# TODO: Test if interface ifId contains "tun", throw exception if it does
 
-		# Tunnels have the following parameters of interest:
+		# Normal interfaces have the following parameters of interest:
 		# * addr
-		# * peer
+		# * netmask
 		addrTypes = netifaces.ifaddresses(self.ifId)
 		if (self.addrType in addrTypes):
 			addrList = addrTypes[self.addrType]

@@ -9,7 +9,18 @@ STOPPED = 0
 RUNNING = 1
 
 class Service:
+	"""
+	Class to represent a system service
+	"""
 	def __init__(self, name, initSystem, verbose = False):
+		"""
+		Constructor
+		@param name Service name
+		@param initSystem The init system in use by the OS
+		@param verbose Indicate whether or not verbose mode should be used
+
+		@throws TODO: exception on unsupported initSystem
+		"""
 		self.name = name
 		self.initSystem = initSystem
 		self.verbose = verbose
@@ -23,6 +34,13 @@ class Service:
 			# TODO: throw and handle exception
 
 	def getCmd(self, action):
+		"""
+		Retrieve the service command to run
+		@param action Specific service action to perform
+
+		@return Command to run to perform the provided action for the service
+		@throws TODO: exception on unsupported initSystem
+		"""
 		theCmd = ""
 		if (self.initSystem == "openRC"):
 			theCmd = ["/etc/init.d/" + self.name] + [action]
@@ -32,6 +50,11 @@ class Service:
 		return theCmd
 
 	def getStatus(self):
+		"""
+		Retrieve service status
+
+		@return RUNNING if service is active, STOPPED otherwise
+		"""
 		cmd = self.getCmd("status")
 		if (self.verbose):
 			print("Command to execute [%d]: %s" % (len(cmd), cmd))
@@ -56,8 +79,14 @@ class Service:
 				print("Exception Command output:\n%s" % outString)
 		return STOPPED
 
-	def start(self, testCount = 1, waitTime = 3):
-		# TODO: Exception on (testCount < 1)
+	def start(self, maxAttempts = 1, waitTime = 3):
+		"""
+		Start service
+		@param maxAttempts The maximum number of attempts that should be made to start the service (defaults to 1)
+		@param waitTime The time to wait (in seconds) between failed attempts to avoid false negatives (defaults to 3)
+
+		@return RUNNING on successful service start, STOPPED otherwise
+		"""
 		cmd = self.getCmd("start")
 		if (self.verbose):
 			print("Command to execute [%d]: %s" % (len(cmd), cmd))
@@ -84,18 +113,21 @@ class Service:
 				print("OK string not found")
 				return STOPPED
 		# Here the service have most likely started, but is not yet listed as running
-		for cnt in range(0, testCount):
-			print("Testing service status [%d/%d]" % (cnt, testCount))
+		for cnt in range(0, maxAttempts):
+			print("Testing service status [%d/%d]" % (cnt, maxAttempts))
 			status = self.getStatus()
 			if (status == RUNNING):
 				print("Start -> status is running")
 				return RUNNING
 			else:
 				time.sleep(waitTime)
-		print("Service not started yet after %d rounds" % testCount)
+		print("Service not started yet after %d rounds" % maxAttempts)
 		return STOPPED
 
 	def stop(self):
+		"""
+		Stop the serivce
+		"""
 		cmd = self.getCmd("stop")
 		if (self.verbose):
 			print("Command to execute [%d]: %s" % (len(cmd), cmd))
