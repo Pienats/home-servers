@@ -1,5 +1,5 @@
-
 import subprocess
+import logging
 
 import Network.interface as interface
 import Service.service as service
@@ -55,16 +55,24 @@ class VPN:
 		# First try to find out if the service has started
 		status = self.service.getStatus()
 		if (status == service.RUNNING):
-			print("VPN Service is running")
+			logging.info("VPN: Service is running")
+			if (self.verbose):
+				print("VPN Service is running")
 			ifStatus = self.vpnIf.getStatus()
 			if (ifStatus == interface.UP):
-				print("VPN interface is up")
+				logging.info("VPN: Interface is up")
+				if (self.verbose):
+					print("VPN interface is up")
 				return UP
 			else:
-				print("VPN interface is not available")
+				logging.info("VPN: Interface is not available")
+				if (self.verbose):
+					print("VPN interface is not available")
 				self.service.stop()
 		else:
-			print("VPN service is not running")
+			logging.info("VPN: Service is not running")
+			if (self.verbose):
+				print("VPN service is not running")
 			self.service.stop() # Make sure service is stopped
 		return DOWN
 
@@ -74,15 +82,17 @@ class VPN:
 
 		@return UP if VPN is active and functional, DOWN otherwise
 		"""
+		logging.info("VPN: Starting...")
 		status = self.service.start(5, 5)
 		if (status == service.RUNNING):
-			#do stuff
+			logging.info("VPN: Started")
 			ifStatus = self.vpnIf.getStatus()
 			if (ifStatus == interface.UP):
-				print("VPN service is running")
 				return UP
 			else:
-				print("Error starting VPN")
+				logging.info("VPN: Unable to start service")
+				if (self.verbose):
+					print("Error starting VPN")
 				self.service.stop() # Make sure service is stopped
 		else:
 			print("Service failed to start")
@@ -96,6 +106,7 @@ class VPN:
 		"""
 		Stop the VPN service
 		"""
+		logging.info("VPN: Stopping")
 		self.service.stop()
 
 	def updateInfo(self):
@@ -115,6 +126,7 @@ class VPN:
 		if not self.pingOne:
 			self.ifParams[KEY_PING] = self.ifParams[KEY_PEER]
 		else:
+			logging.info("VPN: Need to ping gateway with last IP octect == 1")
 			peer = self.ifParams[KEY_PEER]
 			peerComps = peer.split('.')
 			reconstPeer = peerComps[0] + "." + peerComps[1] + "." + peerComps[2] + ".1"
@@ -129,13 +141,16 @@ class VPN:
 		@return UP if VPN is active and functional, DOWN otherwise
 		"""
 		if (len(self.ifParams) == 0):
-			print("No interface parameters available")
+			logging.info("No interface parameters available")
+			if (self.verbose):
+				print("No interface parameters available")
 			return
 
 		cmd = ["ping", "-c 1", self.ifParams[KEY_PING]]
 		if (self.verbose):
 			print("Command to execute [%d]: %s" % (len(cmd), cmd))
 		try:
+			logging.info("VPN: Attempting to ping %s" % (self.ifParams[KEY_PING]))
 			output = subprocess.check_output(cmd)
 			if (self.verbose):
 				outString = output.decode("utf-8")

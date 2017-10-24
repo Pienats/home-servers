@@ -7,6 +7,7 @@ import sys
 import getopt
 import configparser
 import subprocess
+import logging
 
 import Service.service as service
 import Network.interface as interface
@@ -27,6 +28,7 @@ class GlobalState:
 	testMode = False
 	verbose = False
 	basePath = os.curdir
+	logFile = "/dev/shm/torrent_vpn.log"
 	configFile = ""
 
 	# Shared config
@@ -69,6 +71,7 @@ def printUsage(appName):
 	print("  -h | --help                            This help message")
 	print("  -b | --base-path     <base path>       Base path from where all scripts are accessible")
 	print("  -c | --config        <config file>     Path to the configuration file to use for parameters")
+	print("  -l | --log           <log file>        File to log to (defaults to %s" % GlobalState.logFile)
 	print("  -t | --test                            Enable test mode (automatically lets certain checks return true")
 	print("  -v | --verbose                         Enable verbose mode")
 	sys.exit()
@@ -80,7 +83,7 @@ def parseCommandLine(argv):
 	No return value, but GlobalState members are set
 	"""
 	try:
-		opts, args = getopt.getopt(argv[1:], "hb:c:tv", ["help","base-path=","config=","test","verbose"])
+		opts, args = getopt.getopt(argv[1:], "hb:c:l:tv", ["help","base-path=","config=","log=","test","verbose"])
 	except getopt.GetoptError as goe:
 		print(goe)
 		printUsage(argv[0])
@@ -96,6 +99,10 @@ def parseCommandLine(argv):
 			if (GlobalState.verbose):
 				print("Config file to use: %s" % arg)
 			GlobalState.configFile = arg
+		elif opt in ("-l", "--log"):
+			if (GlobalState.verbose):
+				print("Log file to use: %s" % arg)
+			GlobalState.logFile = arg
 		elif opt in ("-t", "--test"):
 			if (GlobalState.verbose):
 				print("Test mode enabled")
@@ -143,7 +150,7 @@ def setLanInfo():
 					if (GlobalState.verbose):
 						print("\n\n\tLAN IF info: %s" % GlobalState.lanInterface.getNetworkParams())
 
-def torrentsClearAdded():
+def torrentsClearProcessed():
 	"""
 	Clear all torrents marked as 'added'
 	(Note that these are torrents 'added' by Transmission, thus consumed from the
@@ -155,7 +162,9 @@ def torrentsClearAdded():
 			added_torrents.append(f)
 
 	if (len(added_torrents) > 0):
-		print("The following added torrents will now be deleted:")
+		logging.info("Torrents: Clearing processed torrents")
+		if (GlobalState.verbose):
+			print("The following processed torrents will now be deleted:")
 		for f in added_torrents:
 			full_path = GlobalState.torrentAddedPath+"/"+f
 			print(full_path)
@@ -172,8 +181,9 @@ def needFlexget():
 		return True
 
 	if (((currentTime.hour % 2) == 0) and (currentTime.minute < 5)):
+		logging.info("Flexget needs to be run")
 		if (GlobalState.verbose):
-			print("Flexget needs to be called")
+			print("Flexget needs to be run")
 		return True
 	return False
 
@@ -191,12 +201,13 @@ def needTorrentClient():
 			active_torrents.append(f)
 
 	if ((len(pending_torrents) > 0) or (len(active_torrents) > 0)):
+		logging.info("Torrent client needs to be run")
 		if (GlobalState.verbose):
-			print("Pending or active torrents present (we need to start transmission for these)")
-			print(pending_torrents)
+			print("Pending or active torrents present (we need to start torrent client for these)")
 		return True
 	elif (GlobalState.verbose):
-		print("No pending or active torrents (don't need to start transmission)")
+		print("No pending or active torrents (don't need to start torrent client)")
+	logging.info("Torrent client not needed")
 	return False
 
 def vpnSetRoutesAndRules():
@@ -244,19 +255,24 @@ def vpnCheck(vpn, maxAttempts = 1):
 		vpnStatus = vpn.getStatus()
 
 		if (vpnStatus != vpnet.UP):
+			logging.info("Attempting to start VPN [%d/%d]" % (attempt, maxAttempts))
 			if (GlobalState.verbose):
 				print("VPN is down, starting it...")
 			vpnStatus = vpn.start()
 
 			if (vpnStatus != vpnet.UP):
-				print("No active VPN connection, aborting")
+				logging.info("VPN: failed to start on attempt %d of %d, aborting" % (attempt, maxAttempts))
+				if (GlobalState.verbose):
+					print("VPN failed to start on attempt %d of %d, aborting" % (attempt, maxAttempts))
 				retVal = ERROR
 				break
 
 			# Set routes and rules
 			retVal = vpnSetRoutesAndRules()
 			if (retVal == ERROR):
-				print("Unable to set rules and route, aborting")
+				logging.info("VPN: failed to set rules and route on attempt %d of %d, aborting" % (attempt, maxAttempts))
+				if (GlobalState.verbose):
+					print("VPN failed to set rules and route on attempt %d of %d, aborting" % (attempt, maxAttempts))
 				break
 
 		# Here the VPN service should be up with the tunnel interface configured
@@ -266,13 +282,17 @@ def vpnCheck(vpn, maxAttempts = 1):
 		vpnStatus = vpn.pingPeer()
 
 		if (vpnStatus != vpnet.UP):
-			print("Unable to ping VPN peer")
+			logging.info("VPN: Failed to ping peer")
+			if (GlobalState.verbose):
+				print("Unable to ping VPN peer")
 			retVal = ERROR
 			vpn.stop() # Restart VPN to get a better connection
 			continue
 
+		# Reaching this point means the VPN is up and connected
+		logging.info("VPN: Active and functional")
 		retVal = SUCCESS
-		break # Reaching this point means the VPN is up and connected
+		break
 
 	if (retVal == ERROR):
 		vpn.stop()
@@ -437,17 +457,21 @@ def flexgetRun():
 		print("Flexget: command to execute")
 		print(cmd)
 	try:
+		logging.info("Flexget: running...")
 		output = subprocess.check_output(cmd)
 		outString = output.decode("utf-8")
+		logging.info("Flexget: completed")
 		if (GlobalState.verbose):
 			print(outString)
 		return SUCCESS
 	except subprocess.CalledProcessError as cpe:
 		outString = cpe.output.decode("utf-8")
-		print("Route error: %d" % cpe.returncode)
-		print("Exception Command output:\n%s" % outString)
+		logging.info("Flexget: Error %d" % cpe.returncode)
+		logging.info("Flexget: Exception Command output:\n%s" % outString)
+		if (GlobalState.verbose):
+			print("Flexget error: %d" % cpe.returncode)
+			print("Exception Command output:\n%s" % outString)
 	return ERROR
-	#return SUCCESS
 
 def transmissionUpdateBindIp(transmissionService, configFile, vpnIp):
 	"""
@@ -457,14 +481,16 @@ def transmissionUpdateBindIp(transmissionService, configFile, vpnIp):
 
 	@return ERROR on failure, SUCCESS otherwise
 	"""
-
+	logging.info("Transmission: VPN IP: %s" % vpnIp)
 	if (GlobalState.verbose):
 		print("VPN IP: %s" % vpnIp)
 	try:
 		with open(configFile, 'r') as config:
 			data = config.readlines()
 	except FileNotFoundError as fnfe:
-		print("File %s not found" % configFile)
+		logging("Transmission: File %s not found" % configFile)
+		if (GlobalState.verbose):
+			print("File %s not found" % configFile)
 		return ERROR
 
 	idx = 0
@@ -474,13 +500,18 @@ def transmissionUpdateBindIp(transmissionService, configFile, vpnIp):
 		if "bind-address-ipv4" in line:
 			#tmp = line.split()
 			bindIp = line.split()[1].strip('",')
+			logging.info("Transmission: Bind IPv4: %s" % bindIp)
 			if (GlobalState.verbose):
 				print("Bind IPv4: %s" % bindIp)
 			if (bindIp == vpnIp):
-				print("No Transmission IPv4 bind address update required")
+				logging.info("Transmission: No Transmission IPv4 bind address update required")
+				if (GlobalState.verbose):
+					print("No Transmission IPv4 bind address update required")
 				return SUCCESS
 			else:
-				print("Current and stored IPs do not match, update required")
+				logging.info("Transmission: Current and stored IPs do not match, update required")
+				if (GlobalState.verbose):
+					print("Current and stored IPs do not match, update required")
 				# Stop the transmission service
 				while (transmissionService.getStatus() == service.RUNNING):
 					transmissionService.stop()
@@ -498,55 +529,82 @@ def transmissionUpdateBindIp(transmissionService, configFile, vpnIp):
 	with open(configFile, 'w') as config:
 		config.writelines(data)
 
+	logging.info("Transmission: IPv4 bind address update")
 	return SUCCESS
 
 ######################################################################################
-print("The current date is %d-%d-%d" % (currentDate.year, currentDate.month, currentDate.day ))
-print("The current time is %d:%d" % (currentTime.hour, currentTime.minute))
-parseCommandLine(sys.argv)
-getConfig(GlobalState.configFile)
+def main():
+	parseCommandLine(sys.argv)
+	getConfig(GlobalState.configFile)
 
-setLanInfo()
+	# Start log
+	logging.basicConfig(filename = GlobalState.logFile, level = logging.INFO)
 
-print("\n")
+	curDate = "%04d-%02d-%02d" % (currentDate.year, currentDate.month, currentDate.day)
+	curTime = "%02d:%02d" % (currentTime.hour, currentTime.minute)
 
-currentTorrents = False
+	logging.info("========================================================================")
+	logging.info("%s - %s" % (curDate, curTime))
 
-vpn = vpnet.VPN(GlobalState.vpnProvider, GlobalState.vpnInterface, GlobalState.initSystem, GlobalState.vpnPingOne)
-transmission = service.Service(GlobalState.torrentDaemonName, GlobalState.initSystem)
+	if (GlobalState.verbose):
+		print("The current date is %s" % (curDate))
+		print("The current time is %s" % (curTime))
 
-if (needFlexget() or needTorrentClient()):
-	print("VPN connection is needed")
+	setLanInfo()
 
-	r = vpnCheck(vpn, 2)
-	if (r == SUCCESS):
-		print("VPN is good to go")
-	else:
-		print("VPN error, aborting")
-		sys.exit(1);
+	currentTorrents = False
 
-# Here the VPN can be concidered up and functional
-if (needFlexget()):
-	flexgetRun()
+	vpn = vpnet.VPN(GlobalState.vpnProvider, GlobalState.vpnInterface, GlobalState.initSystem, GlobalState.vpnPingOne)
+	transmission = service.Service(GlobalState.torrentDaemonName, GlobalState.initSystem)
 
-if (needTorrentClient()):
-	currentTorrents = True
-	if (transmissionUpdateBindIp(transmission, GlobalState.torrentConfigFile, vpn.getAddr()) == SUCCESS):
-		print("Transmission bind IP is OK")
-	else:
-		print("Error with Transmission bind IP, aborting")
-		sys.exit(1)
+	if (needFlexget() or needTorrentClient()):
+		logging.info("VPN: connection is needed")
+		if (GlobalState.verbose):
+			print("VPN connection is needed")
 
-	if (transmission.getStatus() == service.STOPPED):
-		print("Starting Transmission service")
-		transmission.start()
-		# If Transmission service fails to start, there is probably nothing we can do at this point
-		# So don't test for it, just fall through and catch any error output in the log
+		r = vpnCheck(vpn, 2)
+		if (r == SUCCESS):
+			if (GlobalState.verbose):
+				print("VPN is good to go")
+		else:
+			if (GlobalState.verbose):
+				print("VPN error, aborting")
+			sys.exit(1);
 
-if (not currentTorrents):
-	print("No current torrents\nStop the torrent daemon and VPN")
-	transmission.stop()
-	vpn.stop()
+	# Here the VPN can be concidered up and functional
+	if (needFlexget()):
+		flexgetRun()
 
-# Clear any already added torrents
-torrentsClearAdded()
+	if (needTorrentClient()):
+		currentTorrents = True
+		if (transmissionUpdateBindIp(transmission, GlobalState.torrentConfigFile, vpn.getAddr()) == SUCCESS):
+			if (GlobalState.verbose):
+				print("Transmission bind IP is OK")
+		else:
+			logging.info("Transmission: Error with bind IP, aborting")
+			if (GlobalState.verbose):
+				print("Error with Transmission bind IP, aborting")
+			sys.exit(1)
+
+		if (transmission.getStatus() == service.STOPPED):
+			logging.info("Transmission: Starting Transmission service")
+			if (GlobalState.verbose):
+				print("Starting Transmission service")
+			transmission.start()
+			# If Transmission service fails to start, there is probably nothing we can do at this point
+			# So don't test for it, just fall through and catch any error output in the log
+
+	if (not currentTorrents):
+		logging.info("Transmission: No current torrents; Stop the torrent daemon and VPN")
+		if (GlobalState.verbose):
+			print("No current torrents\nStop the torrent daemon and VPN")
+		transmission.stop()
+		vpn.stop()
+
+	# Clear any already added torrents
+	torrentsClearProcessed()
+	logging.info("")
+
+
+if __name__ == '__main__':
+	main()

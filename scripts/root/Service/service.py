@@ -3,6 +3,7 @@ Linux service wrapper and abstraction
 '''
 import subprocess
 import time
+import logging
 
 # Some "Constant" values
 STOPPED = 0
@@ -30,7 +31,9 @@ class Service:
 			self.STATUS_STARTED_STR = "started"
 			self.STATUS_STOPPED_STR = "stopped"
 		else:
-			print("Unsupported service %s" % self.initSystem)
+			logging.info("Service: Unsupported service %s" % self.initSystem)
+			if (self.verbose):
+				print("Unsupported service %s" % self.initSystem)
 			# TODO: throw and handle exception
 
 	def getCmd(self, action):
@@ -45,7 +48,9 @@ class Service:
 		if (self.initSystem == "openRC"):
 			theCmd = ["/etc/init.d/" + self.name] + [action]
 		else:
-			print("Unsupported service %s" % self.initSystem)
+			logging.info("Service: Unsupported service %s" % self.initSystem)
+			if (self.verbose):
+				print("Unsupported service %s" % self.initSystem)
 			# TODO: throw and handle exception
 		return theCmd
 
@@ -64,11 +69,15 @@ class Service:
 			if (self.verbose):
 				print("Command output:\n%s" % outString)
 			if (self.STATUS_STARTED_STR in outString):
+				logging.info("Service: %s status: Running" % (self.name))
 				return RUNNING
 			elif (self.STATUS_STOPPED_STR in outString):
+				logging.info("Service: %s status: Stopped" % (self.name))
 				return STOPPED
 			else:
-				print("Unknown state")
+				logging.info("Service: %s status: Unknown state" % (self.name))
+				if (self.verbose):
+					print("Unknown state")
 				return STOPPED
 		except subprocess.CalledProcessError as cpe:
 			# An exception here does not necessarily mean an error, so don't automatically
@@ -77,6 +86,7 @@ class Service:
 				outString = cpe.output.decode("utf-8")
 				print("Service status error: %d" % cpe.returncode)
 				print("Exception Command output:\n%s" % outString)
+		logging.info("Service: %s status: Exception occured, assuming Stopped" % (self.name))
 		return STOPPED
 
 	def start(self, maxAttempts = 1, waitTime = 3):
@@ -91,6 +101,7 @@ class Service:
 		if (self.verbose):
 			print("Command to execute [%d]: %s" % (len(cmd), cmd))
 		try:
+			logging.info("Service: %s start..." % (self.name))
 			output = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
 			#output = subprocess.run(cmd) # python 3.5
 			if (self.verbose):
@@ -110,18 +121,26 @@ class Service:
 			# situations)
 			idx = outString.find(self.OK_STR)
 			if (idx == -1):
-				print("OK string not found")
+				logging.info("Service: %s start error; OK string not found" % (self.name))
+				if (self.verbose):
+					print("OK string not found")
 				return STOPPED
 		# Here the service have most likely started, but is not yet listed as running
 		for cnt in range(0, maxAttempts):
-			print("Testing service status [%d/%d]" % (cnt, maxAttempts))
+			logging.info("Service: %s started, testing status [%d/%d]" % (self.name, cnt, maxAttempts))
+			if (self.verbose):
+				print("Testing service status [%d/%d]" % (cnt, maxAttempts))
 			status = self.getStatus()
 			if (status == RUNNING):
-				print("Start -> status is running")
+				if (self.verbose):
+					print("Start -> status is running")
 				return RUNNING
 			else:
 				time.sleep(waitTime)
-		print("Service not started yet after %d rounds" % maxAttempts)
+
+		logging.info("Service: %s not started yet after %d test attempts" % (self.name, maxAttempts))
+		if (self.verbose):
+			print("Service not started yet after %d test attempts" % (maxAttempts))
 		return STOPPED
 
 	def stop(self):
@@ -132,12 +151,14 @@ class Service:
 		if (self.verbose):
 			print("Command to execute [%d]: %s" % (len(cmd), cmd))
 		try:
+			logging.info("Service: %s stop..." % (self.name))
 			output = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
 			#output = subprocess.run(cmd) # python 3.5
 			if (self.verbose):
 				outString = output.decode("utf-8")
 				print("Command output:\n%s" % outString)
 		except subprocess.CalledProcessError as cpe:
+			logging.info("Service: %s stop error" % (self.name))
 			outString = cpe.output.decode("utf-8")
 			print("Service stop error: %d" % cpe.returncode)
 			#print("Exception stderr output:\n%s" % cpe.stderr) # python 3.5

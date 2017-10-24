@@ -2,6 +2,7 @@
 import subprocess
 import netifaces
 import ipaddress
+import logging
 
 # Some "Constant" values
 UP = 1
@@ -44,10 +45,11 @@ class Interface:
 		availableIfs = netifaces.interfaces()
 
 		if self.ifId in availableIfs:
-			print("Interface %s is available" % self.ifId)
+			if (self.verbose):
+				print("Interface %s is available" % (self.ifId))
 			return UP
-		else:
-			print("Interface %s not available" % self.ifId)
+		elif (self.verbose):
+			print("Interface %s not available" % (self.ifId))
 		return DOWN
 
 	def getTunnelParams(self):
@@ -69,17 +71,23 @@ class Interface:
 			addrList = addrTypes[self.addrType]
 			addr = addrList[0] # Assume the entry we want is the first list entry
 			if (KEY_ADDR not in addr):
-				print("Interface %s does not have an address" % self.ifId)
+				logging.info("Interface: %s does not have an address" % (self.ifId))
+				if (self.verbose):
+					print("Interface %s does not have an address" % (self.ifId))
 				return {}
 
 			if (KEY_PEER not in addr):
-				print("Interface %s does not contain a peer address" % self.ifId)
+				logging.info("Interface: %s does not contain a peer address" % (self.ifId))
+				if (self.verbose):
+					print("Interface %s does not contain a peer address" % (self.ifId))
 				return {}
 
 			return addr
 
 		else:
-			print("Key type %d not found in available address types" % self.addrType)
+			logging.info("Interface: %s: Key type %d not found in available address types" % (self.ifId, self.addrType))
+			if (self.verbose):
+				print("Key type %d not found in available address types" % (self.addrType))
 
 	def getNetworkParams(self):
 		"""
@@ -100,16 +108,22 @@ class Interface:
 			addrList = addrTypes[self.addrType]
 			addr = addrList[0] # Assume the entry we want is the first list entry
 			if (KEY_ADDR not in addr):
-				print("Interface %s does not have an address" % self.ifId)
+				logging.info("Interface: %s does not have an address" % (self.ifId))
+				if (self.verbose):
+					print("Interface %s does not have an address" % (self.ifId))
 				return None
 
 			if (KEY_NETMASK not in addr):
-				print("Interface %s does not contain a netmask" % self.ifId)
+				logging.info("Interface: %s does not contain a netmask" % (self.ifId))
+				if (self.verbose):
+					print("Interface %s does not contain a netmask" % (self.ifId))
 				return None
 
 			genStr = addr[KEY_ADDR]+"/"+addr[KEY_NETMASK]
 			return ipaddress.ip_interface(genStr).network
 		else:
-			print("Key type %d not found in available address types" % self.addrType)
+			logging.info("Interface: %s: Key type %d not found in available address types" % (self.ifId, self.addrType))
+			if (self.verbose):
+				print("Key type %d not found in available address types" % (self.addrType))
 
 
