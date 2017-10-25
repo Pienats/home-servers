@@ -22,7 +22,7 @@ If there are active torrents (new/existing):
 If there are no active torrents, stop the torrent client and the VPN
 
 # Setup and configuration
-Note: The idea is to run these activities as the "transmission" user. The iptables rules trigger on this user, and routes only this users traffic through the VPN. As the transmission user does not necessarily have a shell specified, the commands is recommended to be run from the root acount, or at least within a "sudo" command.
+Note: The idea is to run these activities as the "transmission" user. The iptables rules trigger on this user, and routes only this user's traffic through the VPN. As the transmission user does not necessarily have a shell specified, the commands are recommended to be run from the root acount, or at least within a "sudo" command.
 
 ## "Installing" the server scripts
 Simply clone the git repo to an appropriate location.
@@ -42,6 +42,7 @@ Install the following packages using the system package manager
 * iproute2
 
 Ubuntu: `sudo apt-get install python3 python3-netifaces python3-pip openvpn iptables transmission-daemon iproute2`
+
 Gentoo: `emerge -va dev-lang/python dev-python/netifaces dev-python/pip net-vpn/openvpn net-firewall/iptables net-p2p/transmission sys-apps/iproute2`
 
 ## Update system configuration files
@@ -70,6 +71,7 @@ Add the following line to `/etc/iproute2/rt_tables`:
 ```
 200		<vpn table name>
 ```
+This will create the alternate routing table used for the policy based routing.
 
 ## Create/Update OpenVPN configuration files
 It is assumed that the user knows how to appropriately set up the OpenVPN configuration files to achieve the following:
@@ -93,8 +95,8 @@ The remainder of this guide will simply refer to `</transmission/config/dir/>`
 * Edit `</transmission/config/dir>/settings.json` to update the config to your liking
 * Add the following lines to `/var/lib/<transmission dir>/config/settings.json`:
 ```
-	"watch-dir": "<path/where/flexget/will/download/new/torrents/>", 
-    "watch-dir-enabled": true
+"watch-dir": "<path/where/flexget/will/download/new/torrents/>", 
+"watch-dir-enabled": true
 ```
 NOTE: If it does not yet exist, create the `watch-dir` and set the ownership to the transmission user
 
