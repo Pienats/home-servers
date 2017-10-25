@@ -214,7 +214,7 @@ def vpnSetRoutesAndRules():
 	"""
 	Set the VPN routes, rules and iptables entries based on configured parameters
 	"""
-	cmd = [GlobalState.basePath + "Network/vpn_route.sh",
+	cmd = [GlobalState.basePath + "/Network/vpn_route.sh",
 			"-s", GlobalState.initSystem,
 			"-l", GlobalState.lanInterface.getId(),
 			"-g", GlobalState.lanGw,

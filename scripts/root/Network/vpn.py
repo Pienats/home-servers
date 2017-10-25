@@ -117,7 +117,7 @@ class VPN:
 		if (status == service.RUNNING):
 			logging.info("VPN: Started")
 
-			for (cnt in range(0, ifAttempts)):
+			for cnt in range(0, ifAttempts):
 				ifStatus = self.vpnIf.getStatus()
 				if (ifStatus == interface.UP):
 					return UP
