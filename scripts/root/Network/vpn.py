@@ -44,7 +44,8 @@ class VPN:
 		try:
 			if (self.initSystem == "openRC"):
 				self.service = service.Service("openvpn." + self.provider, self.initSystem, self.verbose)
-				self.vpnIf = interface.Interface(self.ifId, verbose)
+			elif (self.initSystem == "systemd"):
+				self.service = service.Service("openvpn@" + self.provider, self.initSystem, self.verbose)
 			else:
 				logging.info("VPN: Unsupported init system type %s" % (self.initSystem))
 				if (self.verbose):
@@ -58,6 +59,8 @@ class VPN:
 				print("VPN: service error: %s" % (srvMsg))
 			msg = "Service error occured: %s" %  (srvMsg)
 			raise VPNError(msg)
+
+		self.vpnIf = interface.Interface(self.ifId, verbose)
 		return
 
 	def getStatus(self):

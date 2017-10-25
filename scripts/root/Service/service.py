@@ -37,6 +37,10 @@ class Service:
 			self.OK_STR = "[ ok ]"
 			self.STATUS_STARTED_STR = "started"
 			self.STATUS_STOPPED_STR = "stopped"
+		elif (self.initSystem == "systemd"):
+			self.OK_STR = ""
+			self.STATUS_STARTED_STR = "active (running)"
+			self.STATUS_STOPPED_STR = "inactive (dead)"
 		else:
 			logging.info("Service: Unsupported service %s" % self.initSystem)
 			if (self.verbose):
@@ -54,6 +58,8 @@ class Service:
 		theCmd = ""
 		if (self.initSystem == "openRC"):
 			theCmd = ["/etc/init.d/" + self.name] + [action]
+		elif (self.initSystem == "systemd"):
+			theCmd = ["systemctl", action, self.name]
 		else:
 			logging.info("Service: Unsupported service %s" % (self.initSystem))
 			if (self.verbose):
