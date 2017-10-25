@@ -562,8 +562,8 @@ def main():
 	currentTorrents = False
 
 	try:
-		vpn = vpnet.VPN(GlobalState.vpnProvider, GlobalState.vpnInterface, GlobalState.initSystem, GlobalState.vpnPingOne)
-		transmission = service.Service(GlobalState.torrentDaemonName, GlobalState.initSystem)
+		vpn = vpnet.VPN(GlobalState.vpnProvider, GlobalState.vpnInterface, GlobalState.initSystem, GlobalState.vpnPingOne, GlobalState.verbose)
+		transmission = service.Service(GlobalState.torrentDaemonName, GlobalState.initSystem, GlobalState.verbose)
 	except vpnet.VPNError as ve:
 		msg = ''.join(ve.args)
 		logging.info("VPN exception occured: %s" % (msg))
