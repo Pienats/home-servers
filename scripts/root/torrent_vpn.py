@@ -527,7 +527,7 @@ def transmissionUpdateBindIp(transmissionService, configFile, vpnIp):
 				while (transmissionService.getStatus() == service.RUNNING):
 					transmissionService.stop()
 					# Give the service time to stop
-					currentTime.sleep(1)
+					time.sleep(1)
 
 				# Update the configured IPv4 bind address
 				data[idx] = "    \"bind-address-ipv4\": \""+ vpnIp +"\",\n"
