@@ -151,5 +151,5 @@ To set up a cronjob, as root:
 `crontab -e`
 
 Create an entry:
-`*/5 * * * * </path/to/root/user/scripts>/torrent_vpn.py --config </path/to/ini/config/file/> -b </path/to/root/user/scripts>/`
+`*/5 * * * * PATH=$PATH:</paths/to/ip/and/iptables> </path/to/root/user/scripts>/torrent_vpn.py --config </path/to/ini/config/file/> -b </path/to/root/user/scripts>/`
 This will run the job every 5 minutes. A reasonably short period is suggested, as the VPN tunnel may fail, and a short period allows for it to be restarted regularly, if necessary.
