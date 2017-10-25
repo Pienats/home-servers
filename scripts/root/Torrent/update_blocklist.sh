@@ -1,7 +1,7 @@
 #!/bin/bash
 
-LOG_FILE="/root/update.log"
-BLOCKLIST_DIR="/home/transmission/.config/transmission-daemon/blocklists"
+LOG_FILE="/dev/shm/update_blocklist.log"
+BLOCKLIST_DIR=$1
 
 BL_FILE_LIST="level1 level2 level3 templist ads rangetest spyware hijacked"
 BL_ARRAY=( $BL_FILE_LIST )
@@ -28,13 +28,13 @@ if [ -f $LOG_FILE ]; then
 		do
 			OUTFILE=$CUR_BL_FILE".gz"
 			URL="http://list.iblocklist.com/?list=bt_"$CUR_BL_FILE"&fileformat=p2p&archiveformat=gz"
-			
+
 			# Remove old blocklist files
 			if [ -f $CUR_BL_FILE ]; then
 				echo "Removing old blocklist file:" $CUR_BL_FILE >> $LOG_FILE
 				rm $CUR_BL_FILE*
 			fi
-			
+
 			# Remove old output file
 			if [ -f $OUTFILE ]; then
 				echo "Removing old output file:" $OUTFILE  >> $LOG_FILE
@@ -44,11 +44,11 @@ if [ -f $LOG_FILE ]; then
 			# If no blocklist file, get new one
 			if [ ! -f $CUR_BL_FILE ]; then
 				wget -4 -O $OUTFILE $URL
-				
+
 				if [ -f $OUTFILE ]; then
 					echo "Successfully downloaded" $OUTFILE", extracting" >> $LOG_FILE
 					gunzip $OUTFILE
-					
+
 					# Determine if extraction was successful
 					if [ $? -eq 0 ]; then
 						chmod go+r $CUR_BL_FILE
@@ -56,7 +56,7 @@ if [ -f $LOG_FILE ]; then
 						SUCCESS_CNT=$(($SUCCESS_CNT+1))
 					else
 						echo "Error extracting" $OUTFILE", aborting for this blocklist" >> $LOG_FILE
-						
+
 						# Delete the downloaded file to keep things clean
 						rm $OUTFILE
 					fi
@@ -75,7 +75,7 @@ if [ -f $LOG_FILE ]; then
 		else
 			echo "Too many errors, not restarting Transmission" >> $LOG_FILE
 		fi
-		
+
 		cd - 2>&1 >/dev/null
 	else
 		echo "Unable to change to" $BLOCKLIST_DIR", aborting" >> $LOG_FILE
