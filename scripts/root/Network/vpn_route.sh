@@ -23,11 +23,6 @@ VPN_MARK=""
 VPN_TABLE=""
 VPN_USER=""
 
-echo "Num arguments: $#"
-echo "Program name: $0"
-echo "First arg: $1"
-echo "second arg: $2"
-
 function help {
     echo "Usage:"
     echo $0 "[options]"
