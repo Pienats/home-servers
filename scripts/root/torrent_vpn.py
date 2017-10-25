@@ -621,11 +621,15 @@ def main():
 
 
 	if (not currentTorrents):
-		logging.info("Transmission: No current torrents; Stop the torrent daemon and VPN")
+		logging.info("Transmission: No active torrents")
 		if (GlobalState.verbose):
 			print("No current torrents\nStop the torrent daemon and VPN")
-		transmission.stop()
-		vpn.stop()
+		if (transmission.getStatus() == service.RUNNING):
+			logging.info("Stop the torrent daemon")
+			transmission.stop()
+		if (vpn.getStatus() == vpnet.UP):
+			logging.info("Stop the VPN")
+			vpn.stop()
 
 	# Clear any already added torrents
 	torrentsClearProcessed()
