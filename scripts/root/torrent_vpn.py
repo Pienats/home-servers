@@ -265,7 +265,11 @@ def vpnCheck(vpn, maxAttempts = 1):
 			logging.info("Attempting to start VPN [%d/%d]" % (attempt, maxAttempts))
 			if (GlobalState.verbose):
 				print("VPN is down, starting it...")
-			vpnStatus = vpn.start()
+
+			if (GlobalState.initSystem == "openRC"):
+				vpnStatus = vpn.start()
+			else:
+				vpnStatus = vpn.start(5,5) # systemd might not be ready immediately
 
 			if (vpnStatus != vpnet.UP):
 				logging.info("VPN: failed to start on attempt %d of %d, aborting" % (attempt, maxAttempts))

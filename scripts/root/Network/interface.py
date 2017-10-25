@@ -45,11 +45,14 @@ class Interface:
 		availableIfs = netifaces.interfaces()
 
 		if self.ifId in availableIfs:
+			logging.info("Interface %s is available" % (self.ifId))
 			if (self.verbose):
 				print("Interface %s is available" % (self.ifId))
 			return UP
-		elif (self.verbose):
-			print("Interface %s not available" % (self.ifId))
+		else:
+			logging.info("Interface %s not available" % (self.ifId))
+			if (self.verbose):
+				print("Interface %s not available" % (self.ifId))
 		return DOWN
 
 	def getTunnelParams(self):

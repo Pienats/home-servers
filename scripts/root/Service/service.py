@@ -103,6 +103,8 @@ class Service:
 			# Raise the exception again for calling code
 			raise
 		logging.info("Service: %s status: Exception occured, assuming Stopped" % (self.name))
+		if (self.verbose):
+			print("Service: %s status: Exception occured, assuming Stopped" % (self.name))
 		return STOPPED
 
 	def start(self, maxAttempts = 1, waitTime = 3):
@@ -174,9 +176,11 @@ class Service:
 				outString = output.decode("utf-8")
 				print("Command output:\n%s" % outString)
 		except subprocess.CalledProcessError as cpe:
-			logging.info("Service: %s stop error" % (self.name))
 			outString = cpe.output.decode("utf-8")
-			print("Service stop error: %d" % cpe.returncode)
-			#print("Exception stderr output:\n%s" % cpe.stderr) # python 3.5
-			print("Exception Command output:\n%s" % outString)
+			logging.info("Service: %s stop error" % (self.name))
+			logging.info("Exception Command output:\n%s" % outString)
+			if (self.verbose):
+				print("Service stop error: %d" % cpe.returncode)
+				#print("Exception stderr output:\n%s" % cpe.stderr) # python 3.5
+				print("Exception Command output:\n%s" % outString)
 		return STOPPED

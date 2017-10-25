@@ -1,5 +1,6 @@
 import subprocess
 import logging
+import time
 
 import Network.interface as interface
 import Service.service as service
@@ -105,7 +106,7 @@ class VPN:
 			self.service.stop() # Make sure service is stopped
 		return DOWN
 
-	def start(self):
+	def start(self, ifAttempts = 1, ifWaitTime = 1):
 		"""
 		Start the VPN
 
@@ -115,16 +116,22 @@ class VPN:
 		status = self.service.start(5, 5)
 		if (status == service.RUNNING):
 			logging.info("VPN: Started")
-			ifStatus = self.vpnIf.getStatus()
-			if (ifStatus == interface.UP):
-				return UP
-			else:
-				logging.info("VPN: Unable to start service")
-				if (self.verbose):
-					print("Error starting VPN")
-				self.service.stop() # Make sure service is stopped
+
+			for (cnt in range(0, ifAttempts)):
+				ifStatus = self.vpnIf.getStatus()
+				if (ifStatus == interface.UP):
+					return UP
+				else:
+					time.sleep(ifWaitTime)
+
+			logging.info("VPN: Interface not available")
+			if (self.verbose):
+				print("VPN: Interface not available")
+			self.service.stop() # Make sure service is stopped
 		else:
-			print("Service failed to start")
+			logging.info("VPN: Service failed to start")
+			if (self.verbose):
+				print("VPN: Service failed to start")
 			# To make sure a "long to start up" service isn't creating a stale
 			# entry, stop the service
 			self.service.stop()
