@@ -181,7 +181,6 @@ def needFlexget():
 		return True
 
 	if (((currentTime.hour % 2) == 0) and (currentTime.minute < 5)):
-		logging.info("Flexget needs to be run")
 		if (GlobalState.verbose):
 			print("Flexget needs to be run")
 		return True
@@ -201,13 +200,11 @@ def needTorrentClient():
 			active_torrents.append(f)
 
 	if ((len(pending_torrents) > 0) or (len(active_torrents) > 0)):
-		logging.info("Torrent client needs to be run")
 		if (GlobalState.verbose):
 			print("Pending or active torrents present (we need to start torrent client for these)")
 		return True
 	elif (GlobalState.verbose):
 		print("No pending or active torrents (don't need to start torrent client)")
-	logging.info("Torrent client not needed")
 	return False
 
 def vpnSetRoutesAndRules():
@@ -262,7 +259,7 @@ def vpnCheck(vpn, maxAttempts = 1):
 			return ERROR
 
 		if (vpnStatus != vpnet.UP):
-			logging.info("Attempting to start VPN [%d/%d]" % (attempt, maxAttempts))
+			logging.info("VPN not up, attempting to start [%d/%d]" % (attempt, maxAttempts))
 			if (GlobalState.verbose):
 				print("VPN is down, starting it...")
 
@@ -597,9 +594,11 @@ def main():
 
 	# Here the VPN can be concidered up and functional
 	if (needFlexget()):
+		logging.info("Flexget needs to be run")
 		flexgetRun()
 
 	if (needTorrentClient()):
+		logging.info("Torrent client needed")
 		currentTorrents = True
 		if (transmissionUpdateBindIp(transmission, GlobalState.torrentConfigFile, vpn.getAddr()) == SUCCESS):
 			if (GlobalState.verbose):
@@ -617,6 +616,9 @@ def main():
 			transmission.start()
 			# If Transmission service fails to start, there is probably nothing we can do at this point
 			# So don't test for it, just fall through and catch any error output in the log
+	else:
+		logging.info("Torrent client not needed")
+
 
 	if (not currentTorrents):
 		logging.info("Transmission: No current torrents; Stop the torrent daemon and VPN")

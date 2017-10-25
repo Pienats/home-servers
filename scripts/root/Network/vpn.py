@@ -85,12 +85,10 @@ class VPN:
 			raise VPNError(msg)
 
 		if (status == service.RUNNING):
-			logging.info("VPN: Service is running")
 			if (self.verbose):
 				print("VPN Service is running")
 			ifStatus = self.vpnIf.getStatus()
 			if (ifStatus == interface.UP):
-				logging.info("VPN: Interface is up")
 				if (self.verbose):
 					print("VPN interface is up")
 				return UP
@@ -100,7 +98,6 @@ class VPN:
 					print("VPN interface is not available")
 				self.service.stop()
 		else:
-			logging.info("VPN: Service is not running")
 			if (self.verbose):
 				print("VPN service is not running")
 			self.service.stop() # Make sure service is stopped

@@ -102,7 +102,6 @@ class Service:
 		except ServiceError as se:
 			# Raise the exception again for calling code
 			raise
-		logging.info("Service: %s status: Exception occured, assuming Stopped" % (self.name))
 		if (self.verbose):
 			print("Service: %s status: Exception occured, assuming Stopped" % (self.name))
 		return STOPPED
@@ -169,7 +168,6 @@ class Service:
 		if (self.verbose):
 			print("Command to execute [%d]: %s" % (len(cmd), cmd))
 		try:
-			logging.info("Service: %s stop..." % (self.name))
 			output = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
 			#output = subprocess.run(cmd) # python 3.5
 			if (self.verbose):
