@@ -234,8 +234,11 @@ def vpnSetRoutesAndRules():
 		return SUCCESS
 	except subprocess.CalledProcessError as cpe:
 		outString = cpe.output.decode("utf-8")
-		print("Route error: %d" % cpe.returncode)
-		print("Exception Command output:\n%s" % outString)
+		logging.info("Error setting VPN routes and rules")
+		logging.info("Exception Command output:\n%s" % outString)
+		if (GlobalState.verbose):
+			print("Route error: %d" % cpe.returncode)
+			print("Exception Command output:\n%s" % outString)
 	return ERROR
 
 def vpnCheck(vpn, maxAttempts = 1):
@@ -616,9 +619,6 @@ def main():
 			transmission.start()
 			# If Transmission service fails to start, there is probably nothing we can do at this point
 			# So don't test for it, just fall through and catch any error output in the log
-	else:
-		logging.info("Torrent client not needed")
-
 
 	if (not currentTorrents):
 		logging.info("Transmission: No active torrents")
