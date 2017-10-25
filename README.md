@@ -142,5 +142,14 @@ FlexgetBin = <Flexget binary; typically ${Torrents:HomePath}/.local/bin/flexget>
 This code has only been tested on Gentoo Linux and Ubuntu. Minor modifications might be needed for other distributions; Arch Linux systemd, for example, handles OpenVPN configuration slightly differently.
 
 # Run the scripts (testing the setup)
+To test the setup:
+
+`sudo ./torrent_vpn.py --config </path/to/ini/config/file/> -b </path/to/root/user/scripts>/ -t -v`
 
 # Set up cronjob
+To set up a cronjob, as root:
+`crontab -e`
+
+Create an entry:
+`*/5 * * * * </path/to/root/user/scripts>/torrent_vpn.py --config </path/to/ini/config/file/> -b </path/to/root/user/scripts>/`
+This will run the job every 5 minutes. A reasonably short period is suggested, as the VPN tunnel may fail, and a short period allows for it to be restarted regularly, if necessary.
