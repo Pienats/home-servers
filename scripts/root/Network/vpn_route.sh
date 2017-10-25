@@ -125,7 +125,7 @@ fi
 if [ "$SYSTEM_TYPE" == "openRC" ]; then
 	VPN_CONF="/etc/openvpn/$VPN_PROVIDER.conf"
 elif [ "$SYSTEM_TYPE" == "systemd" ]; then
-	VPN_CONF="/etc/openvpn/client/$VPN_PROVIDER.conf"
+	VPN_CONF="/etc/openvpn/$VPN_PROVIDER.conf"
 else
 	echo "Unsupported system type: \"$SYSTEM_TYPE\""
 	exit 1;
