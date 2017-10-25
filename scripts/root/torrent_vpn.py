@@ -71,7 +71,7 @@ def printUsage(appName):
 	print("  -h | --help                            This help message")
 	print("  -b | --base-path     <base path>       Base path from where all scripts are accessible")
 	print("  -c | --config        <config file>     Path to the configuration file to use for parameters")
-	print("  -l | --log           <log file>        File to log to (defaults to %s" % GlobalState.logFile)
+	print("  -l | --log           <log file>        File to log to (defaults to %s)" % (GlobalState.logFile))
 	print("  -t | --test                            Enable test mode (automatically lets certain checks return true")
 	print("  -v | --verbose                         Enable verbose mode")
 	sys.exit()
@@ -252,7 +252,14 @@ def vpnCheck(vpn, maxAttempts = 1):
 	retVal = ERROR
 
 	for attempt in range(0, maxAttempts):
-		vpnStatus = vpn.getStatus()
+		try:
+			vpnStatus = vpn.getStatus()
+		except vpnet.VPNError as ve:
+			msg = ''.join(ve.args)
+			logging.info("Exception occured while checking VPN status: %s" % (msg))
+			if (GlobalState.verbose):
+				print("Exception occured while checking VPN status: %s" % (msg))
+			return ERROR
 
 		if (vpnStatus != vpnet.UP):
 			logging.info("Attempting to start VPN [%d/%d]" % (attempt, maxAttempts))
@@ -554,8 +561,21 @@ def main():
 
 	currentTorrents = False
 
-	vpn = vpnet.VPN(GlobalState.vpnProvider, GlobalState.vpnInterface, GlobalState.initSystem, GlobalState.vpnPingOne)
-	transmission = service.Service(GlobalState.torrentDaemonName, GlobalState.initSystem)
+	try:
+		vpn = vpnet.VPN(GlobalState.vpnProvider, GlobalState.vpnInterface, GlobalState.initSystem, GlobalState.vpnPingOne)
+		transmission = service.Service(GlobalState.torrentDaemonName, GlobalState.initSystem)
+	except vpnet.VPNError as ve:
+		msg = ''.join(ve.args)
+		logging.info("VPN exception occured: %s" % (msg))
+		if (GlobalState.verbose):
+			print("VPN exception occured: %s" % (msg))
+		sys.exit(1)
+	except service.ServiceError as se:
+		msg = ''.join(se.args)
+		logging.info("Service exception occured: %s" % (msg))
+		if (GlobalState.verbose):
+			print("Service exception occured: %s" % (msg))
+		sys.exit(1)
 
 	if (needFlexget() or needTorrentClient()):
 		logging.info("VPN: connection is needed")

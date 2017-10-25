@@ -9,6 +9,13 @@ import logging
 STOPPED = 0
 RUNNING = 1
 
+class ServiceError(RuntimeError):
+	"""
+	Service related exception
+	"""
+	def __init__(self, arg):
+		self.args = arg
+
 class Service:
 	"""
 	Class to represent a system service
@@ -20,7 +27,7 @@ class Service:
 		@param initSystem The init system in use by the OS
 		@param verbose Indicate whether or not verbose mode should be used
 
-		@throws TODO: exception on unsupported initSystem
+		@throws ServiceError exception on unsupported initSystem
 		"""
 		self.name = name
 		self.initSystem = initSystem
@@ -34,7 +41,7 @@ class Service:
 			logging.info("Service: Unsupported service %s" % self.initSystem)
 			if (self.verbose):
 				print("Unsupported service %s" % self.initSystem)
-			# TODO: throw and handle exception
+			raise ServiceError("Unsupported init system type: %s" % (self.initSystem))
 
 	def getCmd(self, action):
 		"""
@@ -42,16 +49,16 @@ class Service:
 		@param action Specific service action to perform
 
 		@return Command to run to perform the provided action for the service
-		@throws TODO: exception on unsupported initSystem
+		@throws ServiceError exception on unsupported initSystem
 		"""
 		theCmd = ""
 		if (self.initSystem == "openRC"):
 			theCmd = ["/etc/init.d/" + self.name] + [action]
 		else:
-			logging.info("Service: Unsupported service %s" % self.initSystem)
+			logging.info("Service: Unsupported service %s" % (self.initSystem))
 			if (self.verbose):
-				print("Unsupported service %s" % self.initSystem)
-			# TODO: throw and handle exception
+				print("Unsupported service %s" % (self.initSystem))
+			raise ServiceError("Unsupported init system type: %s" % (self.initSystem))
 		return theCmd
 
 	def getStatus(self):
@@ -60,10 +67,10 @@ class Service:
 
 		@return RUNNING if service is active, STOPPED otherwise
 		"""
-		cmd = self.getCmd("status")
-		if (self.verbose):
-			print("Command to execute [%d]: %s" % (len(cmd), cmd))
 		try:
+			cmd = self.getCmd("status")
+			if (self.verbose):
+				print("Command to execute [%d]: %s" % (len(cmd), cmd))
 			output = subprocess.check_output(cmd)
 			outString = output.decode("utf-8")
 			if (self.verbose):
@@ -86,6 +93,9 @@ class Service:
 				outString = cpe.output.decode("utf-8")
 				print("Service status error: %d" % cpe.returncode)
 				print("Exception Command output:\n%s" % outString)
+		except ServiceError as se:
+			# Raise the exception again for calling code
+			raise
 		logging.info("Service: %s status: Exception occured, assuming Stopped" % (self.name))
 		return STOPPED
 

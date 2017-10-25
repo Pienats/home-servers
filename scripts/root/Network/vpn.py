@@ -11,6 +11,13 @@ KEY_ADDR = 'addr'
 KEY_PEER = 'peer'
 KEY_PING = 'ping'
 
+class VPNError(RuntimeError):
+	"""
+	VPN related exception
+	"""
+	def __init__(self, arg):
+		self.args = arg
+
 class VPN:
 	"""
 	Class to represent VPN connections
@@ -34,13 +41,23 @@ class VPN:
 		self.ifParams = {}
 		self.verbose = verbose
 
-		if ( initSystem == "openRC"):
-			self.service = service.Service("openvpn." + self.provider, self.initSystem, self.verbose)
-			self.vpnIf = interface.Interface(self.ifId, verbose)
-		else:
-			print("Unsupported start system type: %s" % initSystem)
-			# TODO: throw exception
-		# TODO: catch and handle/rethrow any exceptions
+		try:
+			if (self.initSystem == "openRC"):
+				self.service = service.Service("openvpn." + self.provider, self.initSystem, self.verbose)
+				self.vpnIf = interface.Interface(self.ifId, verbose)
+			else:
+				logging.info("VPN: Unsupported init system type %s" % (self.initSystem))
+				if (self.verbose):
+					print("Unsupported init system type: %s" % (self.initSystem))
+				msg = "Unsupported init system type: %s" % (self.initSystem)
+				raise VPNError(msg)
+		except service.ServiceError as se:
+			srvMsg = ''.join(se.args)
+			logging.info("VPN: service error: %s" % (srvMsg))
+			if (self.verbose):
+				print("VPN: service error: %s" % (srvMsg))
+			msg = "Service error occured: %s" %  (srvMsg)
+			raise VPNError(msg)
 		return
 
 	def getStatus(self):
@@ -53,7 +70,16 @@ class VPN:
 		@return UP if the VPN is active and functional, DOWN otherwise
 		"""
 		# First try to find out if the service has started
-		status = self.service.getStatus()
+		try:
+			status = self.service.getStatus()
+		except service.ServiceError as se:
+			srvMsg = ''.join(se.args)
+			logging.info("VPN: service error: %s" % (srvMsg))
+			if (self.verbose):
+				print("VPN: service error: %s" % (srvMsg))
+			msg = "Service error occured: %s" %  (srvMsg)
+			raise VPNError(msg)
+
 		if (status == service.RUNNING):
 			logging.info("VPN: Service is running")
 			if (self.verbose):
