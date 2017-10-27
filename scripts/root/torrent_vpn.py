@@ -51,6 +51,7 @@ class GlobalState:
 
 	# Flexget
 	flexgetBin = ""
+	flexgetOverwrite = False
 
 	# LAN config
 	lanInterface = None
@@ -71,6 +72,7 @@ def printUsage(appName):
 	print("  -h | --help                            This help message")
 	print("  -b | --base-path     <base path>       Base path from where all scripts are accessible")
 	print("  -c | --config        <config file>     Path to the configuration file to use for parameters")
+	print("  -f | --flexget                         Flexget overwrite - Run Flexget even if the specified interval is not active")
 	print("  -l | --log           <log file>        File to log to (defaults to %s)" % (GlobalState.logFile))
 	print("  -t | --test                            Enable test mode (automatically lets certain checks return true")
 	print("  -v | --verbose                         Enable verbose mode")
@@ -83,7 +85,7 @@ def parseCommandLine(argv):
 	No return value, but GlobalState members are set
 	"""
 	try:
-		opts, args = getopt.getopt(argv[1:], "hb:c:l:tv", ["help","base-path=","config=","log=","test","verbose"])
+		opts, args = getopt.getopt(argv[1:], "hb:c:fl:tv", ["help","base-path=","config=","flexget","log=","test","verbose"])
 	except getopt.GetoptError as goe:
 		print(goe)
 		printUsage(argv[0])
@@ -99,6 +101,11 @@ def parseCommandLine(argv):
 			if (GlobalState.verbose):
 				print("Config file to use: %s" % arg)
 			GlobalState.configFile = arg
+		elif opt in ("-f", "--flexget"):
+			if (GlobalState.verbose):
+				print("Flexget overwrite")
+			logging.info("Flexget overwrite")
+			GlobalState.flexgetOverwrite = True
 		elif opt in ("-l", "--log"):
 			if (GlobalState.verbose):
 				print("Log file to use: %s" % arg)
@@ -177,7 +184,7 @@ def needFlexget():
 	Determine if Flexget should be run based on the time interval
 	@return True if Flexget should be run, False otherwise
 	"""
-	if (GlobalState.testMode):
+	if ((GlobalState.testMode) or (GlobalState.flexgetOverwrite)):
 		return True
 
 	if (((currentTime.hour % 2) == 0) and (currentTime.minute < 5)):
