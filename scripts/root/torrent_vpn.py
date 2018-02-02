@@ -33,6 +33,7 @@ class GlobalState:
 
 	# Shared config
 	initSystem = ""
+	ispIpFirstOctet = "0"
 
 	# VPN config
 	vpnProvider = ""
@@ -247,6 +248,48 @@ def vpnSetRoutesAndRules():
 			print("Exception Command output:\n%s" % outString)
 	return ERROR
 
+def vpnCheckExternalIp():
+	"""
+	Attempt to determine what the Transmission user context think is the internet
+	facing IP. If it differs from the ISP provided IP (set in the configuration)
+	we assume that the link is up after all. Do this for instances where the peer
+	might be configured to not respond to pings
+	"""
+	logging.info("VPN: Testing apparent external IP")
+	if (GlobalState.verbose):
+		print("VPN: Testing apparent external IP")
+
+	digCmd = "dig +short myip.opendns.com @resolver1.opendns.com"
+
+	cmd = ["su", "-l", GlobalState.vpnUser, "-s", "/bin/bash", "-c", digCmd]
+	if (GlobalState.verbose):
+		print("dig: command to execute")
+		print(cmd)
+	try:
+		logging.info("dig: running...")
+		output = subprocess.check_output(cmd)
+		outString = output.decode("utf-8").strip('\n')
+		logging.info("dig: completed (%s)" % (outString))
+		if (GlobalState.verbose):
+			print(outString)
+
+		digFirst = outString.split('.')[0]
+		if (digFirst != GlobalState.ispIpFirstOctet):
+			logging.info("dig: First octets are different, assuming VPN link up (dig: %s; ISP %s)" % (digFirst, GlobalState.ispIpFirstOctet))
+			if (GlobalState.verbose):
+				print("dig: First octets are different, assuming VPN link up (dig: %s; ISP %s)" % (digFirst, GlobalState.ispIpFirstOctet))
+			return SUCCESS
+
+	except subprocess.CalledProcessError as cpe:
+		outString = cpe.output.decode("utf-8")
+		logging.info("dig: Error %d" % cpe.returncode)
+		logging.info("dig: Exception Command output:\n%s" % outString)
+		if (GlobalState.verbose):
+			print("dig: Error %d" % cpe.returncode)
+			print("dig: Exception Command output:\n%s" % outString)
+
+	return ERROR
+
 def vpnCheck(vpn, maxAttempts = 1):
 	"""
 	Check the VPN state and attempt to start it if necessary
@@ -299,12 +342,24 @@ def vpnCheck(vpn, maxAttempts = 1):
 		vpnStatus = vpn.pingPeer()
 
 		if (vpnStatus != vpnet.UP):
-			logging.info("VPN: Failed to ping peer")
+			logging.info("VPN: Failed to ping peer, attempting to determine external IP")
 			if (GlobalState.verbose):
-				print("Unable to ping VPN peer")
-			retVal = ERROR
-			vpn.stop() # Restart VPN to get a better connection
-			continue
+				print("VPN: Failed to ping peer, attempting to determine external IP")
+				
+			if (GlobalState.ispIpFirstOctet != "0"):
+				logging.info("VPN: Attempting to determine external IP")
+				if (GlobalState.verbose):
+					print("VPN: Attempting to determine external IP")
+				retVal = vpnCheckExternalIp()
+			else:
+				retVal = ERROR
+
+			if (retVal == ERROR):
+				logging.info("VPN: External IP check failed or disabled")
+				if (GlobalState.verbose):
+					print("VPN: External IP check failed or disabled")
+				vpn.stop() # Restart VPN to get a better connection
+				continue
 
 		# Reaching this point means the VPN is up and connected
 		logging.info("VPN: Active and functional")
@@ -327,7 +382,11 @@ def configParseShared(sharedConfig):
 	else:
 		print("Error: Provided config does not specify the init system")
 		sys.exit(1)
-	return
+
+	if 'IspIpFirstOctet' in sharedConfig:
+		GlobalState.ispIpFirstOctet = sharedConfig['IspIpFirstOctet']
+	else:
+		print("Error: Provided config does not specify the ISP provided IP first octet, assume it is disable")
 
 def configParseVpn(vpnConfig):
 	"""
