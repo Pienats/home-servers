@@ -104,7 +104,6 @@ def parseCommandLine(argv):
 		elif opt in ("-f", "--flexget"):
 			if (GlobalState.verbose):
 				print("Flexget overwrite")
-			logging.info("Flexget overwrite")
 			GlobalState.flexgetOverwrite = True
 		elif opt in ("-l", "--log"):
 			if (GlobalState.verbose):

@@ -159,7 +159,7 @@ class VPN:
 		if not self.pingOne:
 			self.ifParams[KEY_PING] = self.ifParams[KEY_PEER]
 		else:
-			logging.info("VPN: Need to ping gateway with last IP octect == 1")
+			logging.info("VPN: Need to ping gateway with last IP octet == 1")
 			peer = self.ifParams[KEY_PEER]
 			peerComps = peer.split('.')
 			reconstPeer = peerComps[0] + "." + peerComps[1] + "." + peerComps[2] + ".1"
