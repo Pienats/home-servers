@@ -40,10 +40,11 @@ Install the following packages using the system package manager
 * iptables
 * tranmsmission
 * iproute2
+* bind-utils/dnsutils
 
-Ubuntu: `sudo apt-get install python3 python3-netifaces python3-pip openvpn iptables transmission-daemon iproute2`
+Ubuntu: `sudo apt-get install python3 python3-netifaces python3-pip openvpn iptables transmission-daemon iproute2 dnsutils`
 
-Gentoo: `emerge -va dev-lang/python dev-python/netifaces dev-python/pip net-vpn/openvpn net-firewall/iptables net-p2p/transmission sys-apps/iproute2`
+Gentoo: `emerge -va dev-lang/python dev-python/netifaces dev-python/pip net-vpn/openvpn net-firewall/iptables net-p2p/transmission sys-apps/iproute2 net-dns/bind-tools`
 
 ## Update system configuration files
 ### sysctl.d configuration files
@@ -118,6 +119,7 @@ The server scripts use an "ini" style configuration file. Create a new server co
 ```
 [DEFAULT]
 InitSystem = <openRC/systemd>
+IspIpFirstOctet = <First octet of the ISP provided IP address [0 to disable]>
 
 [VPN]
 Provider = <VPN service provider (should match the initsystem configuration name, excluding required OS fields; eg vpnarea)>
