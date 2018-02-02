@@ -28,6 +28,7 @@ class GlobalState:
 	testMode = False
 	verbose = False
 	basePath = os.curdir
+	pidFile = "/tmp/torrent_vpn.pid"
 	logFile = "/dev/shm/torrent_vpn.log"
 	configFile = ""
 
@@ -616,90 +617,112 @@ def main():
 	# Start log
 	logging.basicConfig(filename = GlobalState.logFile, level = logging.INFO)
 
-	curDate = "%04d-%02d-%02d" % (currentDate.year, currentDate.month, currentDate.day)
-	curTime = "%02d:%02d" % (currentTime.hour, currentTime.minute)
+	pid = str(os.getpid())
 
-	logging.info("========================================================================")
-	logging.info("%s - %s" % (curDate, curTime))
+	# Test if another instance is already running
+	if (os.path.isfile(GlobalState.pidFile)):
+		logging.info("\t\t-- Process already running, aborting --")
+		if (GlobalState.verbose):
+			print("\t\t-- Process already running, aborting --")
+		sys.exit()
 
-	if (GlobalState.verbose):
-		print("The current date is %s" % (curDate))
-		print("The current time is %s" % (curTime))
-
-	setLanInfo()
-
-	currentTorrents = False
+	file(GlobalState.pidFile, 'w').write(pid)
 
 	try:
-		vpn = vpnet.VPN(GlobalState.vpnProvider, GlobalState.vpnInterface, GlobalState.initSystem, GlobalState.vpnPingOne, GlobalState.verbose)
-		transmission = service.Service(GlobalState.torrentDaemonName, GlobalState.initSystem, GlobalState.verbose)
-	except vpnet.VPNError as ve:
-		msg = ''.join(ve.args)
-		logging.info("VPN exception occured: %s" % (msg))
+		curDate = "%04d-%02d-%02d" % (currentDate.year, currentDate.month, currentDate.day)
+		curTime = "%02d:%02d" % (currentTime.hour, currentTime.minute)
+
+		logging.info("========================================================================")
+		logging.info("%s - %s" % (curDate, curTime))
+
 		if (GlobalState.verbose):
-			print("VPN exception occured: %s" % (msg))
-		sys.exit(1)
-	except service.ServiceError as se:
+			print("The current date is %s" % (curDate))
+			print("The current time is %s" % (curTime))
+
+		setLanInfo()
+
+		currentTorrents = False
+
+		try:
+			vpn = vpnet.VPN(GlobalState.vpnProvider, GlobalState.vpnInterface, GlobalState.initSystem, GlobalState.vpnPingOne, GlobalState.verbose)
+			transmission = service.Service(GlobalState.torrentDaemonName, GlobalState.initSystem, GlobalState.verbose)
+		except vpnet.VPNError as ve:
+			msg = ''.join(ve.args)
+			logging.info("VPN exception occured: %s" % (msg))
+			if (GlobalState.verbose):
+				print("VPN exception occured: %s" % (msg))
+			#sys.exit(1)
+			raise
+		except service.ServiceError as se:
+			msg = ''.join(se.args)
+			logging.info("Service exception occured: %s" % (msg))
+			if (GlobalState.verbose):
+				print("Service exception occured: %s" % (msg))
+			#sys.exit(1)
+			raise
+
+		if (needFlexget() or needTorrentClient()):
+			logging.info("VPN: connection is needed")
+			if (GlobalState.verbose):
+				print("VPN connection is needed")
+
+			r = vpnCheck(vpn, 2)
+			if (r == SUCCESS):
+				if (GlobalState.verbose):
+					print("VPN is good to go")
+			else:
+				if (GlobalState.verbose):
+					print("VPN error, aborting")
+				#sys.exit(1);
+				raise
+
+		# Here the VPN can be concidered up and functional
+		if (needFlexget()):
+			logging.info("Flexget needs to be run")
+			flexgetRun()
+
+		if (needTorrentClient()):
+			logging.info("Torrent client needed")
+			currentTorrents = True
+			if (transmissionUpdateBindIp(transmission, GlobalState.torrentConfigFile, vpn.getAddr()) == SUCCESS):
+				if (GlobalState.verbose):
+					print("Transmission bind IP is OK")
+			else:
+				logging.info("Transmission: Error with bind IP, aborting")
+				if (GlobalState.verbose):
+					print("Error with Transmission bind IP, aborting")
+				#sys.exit(1)
+				raise
+
+			if (transmission.getStatus() == service.STOPPED):
+				logging.info("Transmission: Starting Transmission service")
+				if (GlobalState.verbose):
+					print("Starting Transmission service")
+				transmission.start()
+				# If Transmission service fails to start, there is probably nothing we can do at this point
+				# So don't test for it, just fall through and catch any error output in the log
+
+		if (not currentTorrents):
+			logging.info("Transmission: No active torrents")
+			if (GlobalState.verbose):
+				print("No current torrents\nStop the torrent daemon and VPN")
+			if (transmission.getStatus() == service.RUNNING):
+				logging.info("Stop the torrent daemon")
+				transmission.stop()
+			if (vpn.getStatus() == vpnet.UP):
+				logging.info("Stop the VPN")
+				vpn.stop()
+
+		# Clear any already added torrents
+		torrentsClearProcessed()
+		logging.info("")
+
+	except Exception as theException:
 		msg = ''.join(se.args)
-		logging.info("Service exception occured: %s" % (msg))
-		if (GlobalState.verbose):
-			print("Service exception occured: %s" % (msg))
-		sys.exit(1)
+		print("Exception occured: %s" % (msg))
 
-	if (needFlexget() or needTorrentClient()):
-		logging.info("VPN: connection is needed")
-		if (GlobalState.verbose):
-			print("VPN connection is needed")
-
-		r = vpnCheck(vpn, 2)
-		if (r == SUCCESS):
-			if (GlobalState.verbose):
-				print("VPN is good to go")
-		else:
-			if (GlobalState.verbose):
-				print("VPN error, aborting")
-			sys.exit(1);
-
-	# Here the VPN can be concidered up and functional
-	if (needFlexget()):
-		logging.info("Flexget needs to be run")
-		flexgetRun()
-
-	if (needTorrentClient()):
-		logging.info("Torrent client needed")
-		currentTorrents = True
-		if (transmissionUpdateBindIp(transmission, GlobalState.torrentConfigFile, vpn.getAddr()) == SUCCESS):
-			if (GlobalState.verbose):
-				print("Transmission bind IP is OK")
-		else:
-			logging.info("Transmission: Error with bind IP, aborting")
-			if (GlobalState.verbose):
-				print("Error with Transmission bind IP, aborting")
-			sys.exit(1)
-
-		if (transmission.getStatus() == service.STOPPED):
-			logging.info("Transmission: Starting Transmission service")
-			if (GlobalState.verbose):
-				print("Starting Transmission service")
-			transmission.start()
-			# If Transmission service fails to start, there is probably nothing we can do at this point
-			# So don't test for it, just fall through and catch any error output in the log
-
-	if (not currentTorrents):
-		logging.info("Transmission: No active torrents")
-		if (GlobalState.verbose):
-			print("No current torrents\nStop the torrent daemon and VPN")
-		if (transmission.getStatus() == service.RUNNING):
-			logging.info("Stop the torrent daemon")
-			transmission.stop()
-		if (vpn.getStatus() == vpnet.UP):
-			logging.info("Stop the VPN")
-			vpn.stop()
-
-	# Clear any already added torrents
-	torrentsClearProcessed()
-	logging.info("")
-
+	finally:
+		os.unlink(GlobalState.pidFile)
 
 if __name__ == '__main__':
 	main()
