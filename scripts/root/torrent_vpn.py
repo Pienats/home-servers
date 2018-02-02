@@ -619,19 +619,19 @@ def main():
 
 	pid = str(os.getpid())
 
+	curDate = "%04d-%02d-%02d" % (currentDate.year, currentDate.month, currentDate.day)
+	curTime = "%02d:%02d" % (currentTime.hour, currentTime.minute)
+
 	# Test if another instance is already running
 	if (os.path.isfile(GlobalState.pidFile)):
 		logging.info("\t\t-- Process already running, aborting --")
 		if (GlobalState.verbose):
-			print("\t\t-- Process already running, aborting --")
+			print("\t\t-- [%s %s] Process already running, aborting --" % (curDate, curTime))
 		sys.exit()
 
-	file(GlobalState.pidFile, 'w').write(pid)
+	open(GlobalState.pidFile, 'w').write(pid)
 
 	try:
-		curDate = "%04d-%02d-%02d" % (currentDate.year, currentDate.month, currentDate.day)
-		curTime = "%02d:%02d" % (currentTime.hour, currentTime.minute)
-
 		logging.info("========================================================================")
 		logging.info("%s - %s" % (curDate, curTime))
 
